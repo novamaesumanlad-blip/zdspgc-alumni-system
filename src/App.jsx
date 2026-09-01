@@ -15,20 +15,31 @@ import {
 /* ============================== CONSTANTS ============================== */
 
 const CAMPUSES = [
-  "Pagadian Main Campus",
-  "Molave Campus",
-  "Guipos Campus",
   "Aurora Campus",
-  "San Miguel Campus",
+  "Pagadian Campus",
+  "Dimataling Campus",
+  "Mahayag Campus",
+  "Tambulig Campus",
+  "Margosatubig Campus",
+  "Vincenzo A. Sagun Campus",
+  "Dumingag Campus",
+  "Guipos Campus",
+  "Sominot Campus",
+  "Tabina Campus",
+  "Tigbao Campus",
+  "Lapuyan Campus",
+  "Ramon Magsaysay Campus",
 ];
 
 const COURSES = [
-  "BS Information Technology",
-  "BS Criminology",
-  "BS Business Administration",
-  "BS Elementary Education",
   "BS Agriculture",
-  "BS Hospitality Management",
+  "BS Information System",
+  "Bachelor of Physical Education",
+  "Bachelor of Technical-Vocational Teacher Education",
+  "BS Biology",
+  "Associate in Computer Technology",
+  "BS Civil Engineering",
+  "BS Psychology",
 ];
 
 const GRAD_YEARS = Array.from({ length: 12 }, (_, i) => String(2014 + i));
@@ -40,14 +51,14 @@ const uid = (p = "id") => `${p}_${Date.now().toString(36)}_${Math.random().toStr
 const now = () => new Date().toISOString();
 
 const fmtDate = (iso) => {
-  if (!iso) return "\u2014";
+  if (!iso) return "—";
   const d = new Date(iso);
   return d.toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" });
 };
 
 /* ============================== CSV IMPORT HELPERS ============================== */
 
-// Minimal RFC4180-ish delimited-text parser \u2014 handles quoted fields, escaped quotes (""),
+// Minimal RFC4180-ish delimited-text parser — handles quoted fields, escaped quotes (""),
 // and delimiters/newlines inside quotes, without pulling in an external dependency.
 // `delimiter` defaults to comma (CSV files) but is set to tab when parsing text pasted
 // straight out of Excel/Google Sheets, which uses tabs between columns.
@@ -150,7 +161,7 @@ function validateImportRows(rawRows, existingAlumni, existingUsers, lockCampus) 
 /* ============================== SEED DATA ============================== */
 
 function seedData() {
-  // Default Super Admin account \u2014 provisioned during initial system setup only.
+  // Default Super Admin account — provisioned during initial system setup only.
   // There is no public registration path for admin accounts of any kind.
   const superAdminUser = {
     id: uid("user"), email: "superadmin@zdspgc.edu.ph", username: "superadmin", password: "SuperAdmin!123",
@@ -158,23 +169,23 @@ function seedData() {
   };
 
   // A sample Campus Admin, created the way a Super Admin would create one
-  // via the Manage Admin Accounts page \u2014 included here only to demo the flow.
+  // via the Manage Admin Accounts page — included here only to demo the flow.
   const campusAdminUser = {
-    id: uid("user"), email: "molave.admin@zdspgc.edu.ph", username: "molave.admin", password: "Campus!123",
-    role: "campusadmin", name: "Molave Campus Admin", campus: "Molave Campus", status: "active", createdAt: now(),
+    id: uid("user"), email: "aurora.admin@zdspgc.edu.ph", username: "aurora.admin", password: "Campus!123",
+    role: "campusadmin", name: "Aurora Campus Admin", campus: "Aurora Campus", status: "active", createdAt: now(),
   };
 
   const alumniSeed = [
-    { fullName: "Maria Santos", campus: CAMPUSES[0], course: COURSES[0], gradYear: "2019", email: "maria.santos@example.com", phone: "0917 111 2222", address: "Pagadian City", employment: { status: "Employed", company: "TechCorp PH", position: "Software Developer", location: "Cebu City", dateEmployed: "2020-03-01", related: true }, accountStatus: "approved" },
-    { fullName: "Juan Dela Cruz", campus: CAMPUSES[1], course: COURSES[2], gradYear: "2020", email: "juan.delacruz@example.com", phone: "0917 222 3333", address: "Molave", employment: { status: "Self-Employed", company: "JDC Trading", position: "Owner", location: "Molave", dateEmployed: "2021-06-15", related: false }, accountStatus: "approved" },
-    { fullName: "Angelica Reyes", campus: CAMPUSES[0], course: COURSES[3], gradYear: "2018", email: "angelica.reyes@example.com", phone: "0917 333 4444", address: "Pagadian City", employment: { status: "Employed", company: "DepEd Zamboanga del Sur", position: "Elementary Teacher", location: "Pagadian City", dateEmployed: "2019-08-01", related: true }, accountStatus: "approved" },
-    { fullName: "Mark Villanueva", campus: CAMPUSES[2], course: COURSES[4], gradYear: "2021", email: "mark.villanueva@example.com", phone: "0917 444 5555", address: "Guipos", employment: { status: "Unemployed", company: "", position: "", location: "", dateEmployed: "", related: false }, accountStatus: "approved" },
-    { fullName: "Christine Bautista", campus: CAMPUSES[3], course: COURSES[5], gradYear: "2022", email: "christine.bautista@example.com", phone: "0917 555 6666", address: "Aurora", employment: { status: "Employed", company: "Seda Hotel", position: "Front Desk Officer", location: "Davao City", dateEmployed: "2022-11-10", related: true }, accountStatus: "approved" },
-    { fullName: "Rey Fernandez", campus: CAMPUSES[1], course: COURSES[0], gradYear: "2020", email: "rey.fernandez@example.com", phone: "0917 666 7777", address: "Molave", employment: { status: "Employed", company: "Globe Telecom", position: "IT Support", location: "Zamboanga City", dateEmployed: "2021-01-20", related: true }, accountStatus: "approved" },
-    { fullName: "Kim Aquino", campus: CAMPUSES[0], course: COURSES[1], gradYear: "2023", email: "kim.aquino@example.com", phone: "0917 777 8888", address: "Pagadian City", employment: { status: "Unemployed", company: "", position: "", location: "", dateEmployed: "", related: false }, accountStatus: "pending" },
-    { fullName: "Paolo Ramos", campus: CAMPUSES[4], course: COURSES[2], gradYear: "2019", email: "paolo.ramos@example.com", phone: "0917 888 9999", address: "San Miguel", employment: { status: "Self-Employed", company: "Ramos Agri-Supply", position: "Manager", location: "San Miguel", dateEmployed: "2020-02-01", related: true }, accountStatus: "approved" },
-    { fullName: "Diane Cortez", campus: CAMPUSES[2], course: COURSES[3], gradYear: "2024", email: "diane.cortez@example.com", phone: "0917 999 0000", address: "Guipos", employment: { status: "Unemployed", company: "", position: "", location: "", dateEmployed: "", related: false }, accountStatus: "pending" },
-    { fullName: "Ivan Mendoza", campus: CAMPUSES[3], course: COURSES[4], gradYear: "2021", email: "ivan.mendoza@example.com", phone: "0917 000 1111", address: "Aurora", employment: { status: "Employed", company: "Nestle Philippines", position: "Field Agriculturist", location: "Cagayan de Oro", dateEmployed: "2021-09-05", related: true }, accountStatus: "approved" },
+    { fullName: "Maria Santos", campus: CAMPUSES[0], course: COURSES[0], gradYear: "2019", email: "maria.santos@example.com", phone: "0917 111 2222", address: "Aurora", employment: { status: "Employed", company: "TechCorp PH", position: "Software Developer", location: "Cebu City", dateEmployed: "2020-03-01", related: true }, accountStatus: "approved" },
+    { fullName: "Juan Dela Cruz", campus: CAMPUSES[1], course: COURSES[2], gradYear: "2020", email: "juan.delacruz@example.com", phone: "0917 222 3333", address: "Pagadian City", employment: { status: "Self-Employed", company: "JDC Trading", position: "Owner", location: "Pagadian City", dateEmployed: "2021-06-15", related: false }, accountStatus: "approved" },
+    { fullName: "Angelica Reyes", campus: CAMPUSES[0], course: COURSES[3], gradYear: "2018", email: "angelica.reyes@example.com", phone: "0917 333 4444", address: "Aurora", employment: { status: "Employed", company: "DepEd Zamboanga del Sur", position: "Elementary Teacher", location: "Pagadian City", dateEmployed: "2019-08-01", related: true }, accountStatus: "approved" },
+    { fullName: "Mark Villanueva", campus: CAMPUSES[2], course: COURSES[4], gradYear: "2021", email: "mark.villanueva@example.com", phone: "0917 444 5555", address: "Dimataling", employment: { status: "Unemployed", company: "", position: "", location: "", dateEmployed: "", related: false }, accountStatus: "approved" },
+    { fullName: "Christine Bautista", campus: CAMPUSES[3], course: COURSES[5], gradYear: "2022", email: "christine.bautista@example.com", phone: "0917 555 6666", address: "Mahayag", employment: { status: "Employed", company: "Seda Hotel", position: "Front Desk Officer", location: "Davao City", dateEmployed: "2022-11-10", related: true }, accountStatus: "approved" },
+    { fullName: "Rey Fernandez", campus: CAMPUSES[1], course: COURSES[0], gradYear: "2020", email: "rey.fernandez@example.com", phone: "0917 666 7777", address: "Pagadian City", employment: { status: "Employed", company: "Globe Telecom", position: "IT Support", location: "Zamboanga City", dateEmployed: "2021-01-20", related: true }, accountStatus: "approved" },
+    { fullName: "Kim Aquino", campus: CAMPUSES[0], course: COURSES[1], gradYear: "2023", email: "kim.aquino@example.com", phone: "0917 777 8888", address: "Aurora", employment: { status: "Unemployed", company: "", position: "", location: "", dateEmployed: "", related: false }, accountStatus: "pending" },
+    { fullName: "Paolo Ramos", campus: CAMPUSES[4], course: COURSES[2], gradYear: "2019", email: "paolo.ramos@example.com", phone: "0917 888 9999", address: "Tambulig", employment: { status: "Self-Employed", company: "Ramos Agri-Supply", position: "Manager", location: "Tambulig", dateEmployed: "2020-02-01", related: true }, accountStatus: "approved" },
+    { fullName: "Diane Cortez", campus: CAMPUSES[2], course: COURSES[3], gradYear: "2024", email: "diane.cortez@example.com", phone: "0917 999 0000", address: "Dimataling", employment: { status: "Unemployed", company: "", position: "", location: "", dateEmployed: "", related: false }, accountStatus: "pending" },
+    { fullName: "Ivan Mendoza", campus: CAMPUSES[3], course: COURSES[4], gradYear: "2021", email: "ivan.mendoza@example.com", phone: "0917 000 1111", address: "Mahayag", employment: { status: "Employed", company: "Nestle Philippines", position: "Field Agriculturist", location: "Cagayan de Oro", dateEmployed: "2021-09-05", related: true }, accountStatus: "approved" },
   ];
 
   const alumni = alumniSeed.map((a) => ({ id: uid("al"), ...a, createdAt: now(), updatedAt: now() }));
@@ -188,11 +199,11 @@ function seedData() {
 
   const notifications = [
     { id: uid("notif"), title: "Grand Alumni Homecoming 2026", message: "Join us for the ZDSPGC Grand Alumni Homecoming this December! Reconnect with batchmates and mentors across all campuses.", audience: { type: "all" }, createdAt: now(), readBy: [] },
-    { id: uid("notif"), title: "IT Alumni Job Fair", message: "A job fair for BS Information Technology graduates will be held at the Pagadian Main Campus gymnasium.", audience: { type: "course", value: COURSES[0] }, createdAt: now(), readBy: [] },
+    { id: uid("notif"), title: "Agriculture Alumni Job Fair", message: "A job fair for BS Agriculture graduates will be held at the Aurora Campus gymnasium.", audience: { type: "course", value: COURSES[0] }, createdAt: now(), readBy: [] },
   ];
 
   const posts = [
-    { id: uid("post"), authorId: alumni[0].id, authorName: alumni[0].fullName, content: "Grateful for everything ZDSPGC taught me. Now working as a developer in Cebu \u2014 happy to mentor IT batchmates looking for their first job!", createdAt: now(), likes: [], comments: [ { id: uid("cmt"), authorId: alumni[5].id, authorName: alumni[5].fullName, content: "Inspiring, Maria! Would love some tips.", createdAt: now() } ] },
+    { id: uid("post"), authorId: alumni[0].id, authorName: alumni[0].fullName, content: "Grateful for everything ZDSPGC taught me. Now working as a developer in Cebu — happy to mentor IT batchmates looking for their first job!", createdAt: now(), likes: [], comments: [ { id: uid("cmt"), authorId: alumni[5].id, authorName: alumni[5].fullName, content: "Inspiring, Maria! Would love some tips.", createdAt: now() } ] },
     { id: uid("post"), authorId: alumni[2].id, authorName: alumni[2].fullName, content: "Any batch 2018 Education alumni interested in a mini reunion this December?", createdAt: now(), likes: [], comments: [] },
   ];
 
@@ -319,7 +330,7 @@ export default function App() {
   const [db, setDb] = useState(null);
   const [session, setSession] = useState(null); // {userId, role}
   // "page" only controls what unauthenticated visitors see (landing / alumni auth / admin
-  // login / admin forgot-password). It never grants access by itself \u2014 every dashboard
+  // login / admin forgot-password). It never grants access by itself — every dashboard
   // below is gated on a verified `session` + the matching role on the stored user record,
   // so typing a dashboard "tab" name directly can't skip login or role verification.
   const [page, setPage] = useState("landing"); // landing | alumniAuth | adminLogin | adminForgot
@@ -345,7 +356,7 @@ export default function App() {
     });
   }, []);
 
-  // Must stay above the early `loading` return below \u2014 all hooks in a component need to
+  // Must stay above the early `loading` return below — all hooks in a component need to
   // run in the same order on every render, and this useCallback depends on `update` above.
   const addLog = useCallback((actor, action, detail = "") => {
     update("logs", (list) => [...list, { id: uid("log"), ts: now(), actor, action, detail }]);
@@ -355,7 +366,7 @@ export default function App() {
     return (
       <div className="zd-root zd-loading">
         <style>{CSS}</style>
-        <div className="loader"><GraduationCap size={30} /><span>Loading ZDSPGC Alumni System\u2026</span></div>
+        <div className="loader"><GraduationCap size={30} /><span>Loading ZDSPGC Alumni System…</span></div>
       </div>
     );
   }
@@ -378,7 +389,7 @@ export default function App() {
     setTab("dashboard");
   }
 
-  // Admins (Super Admin or Campus Admin) are looked up by email OR username \u2014 they are
+  // Admins (Super Admin or Campus Admin) are looked up by email OR username — they are
   // never mixed with the public alumni login above, and alumni accounts can never satisfy
   // an admin login even if the credentials happened to match.
   function handleAdminLogin(identifier, password) {
@@ -426,7 +437,7 @@ export default function App() {
       employment: { status: "Unemployed", company: "", position: "", location: "", dateEmployed: "", related: false },
       accountStatus: "pending", createdAt: now(), updatedAt: now(),
     };
-    // Public self-registration always creates an "alumni" account \u2014 there is no way for a
+    // Public self-registration always creates an "alumni" account — there is no way for a
     // visitor to create an admin account of any kind from this form.
     const newUser = { id: uid("user"), email: form.email.trim(), password: form.password, role: "alumni", alumniId: newAlumni.id, name: form.fullName.trim(), createdAt: now() };
     update("alumni", (list) => [...list, newAlumni]);
@@ -436,7 +447,7 @@ export default function App() {
   }
 
   // Nothing below this line renders an admin dashboard unless `sessionValid` is true AND
-  // the stored user's role was verified above \u2014 there is no URL/tab a visitor can jump to
+  // the stored user's role was verified above — there is no URL/tab a visitor can jump to
   // that bypasses handleAdminLogin's credential + status check.
   return (
     <div className="zd-root">
@@ -492,7 +503,7 @@ function AuthScreen({ mode, setMode, error, setError, onLogin, onRegister, onBac
           <h1>ZDSPGC<br />Centralized Alumni<br />Monitoring System</h1>
           <p>One record, every campus. Track employment outcomes, keep alumni connected, and give ZDSPGC leadership the data it needs to plan ahead.</p>
           <ul className="side-list">
-            <li>Pagadian Main \u00b7 Molave \u00b7 Guipos \u00b7 Aurora \u00b7 San Miguel</li>
+            <li>14 campuses across Zamboanga del Sur</li>
             <li>Employment monitoring across every course</li>
             <li>Announcements, surveys, and job postings in one place</li>
           </ul>
@@ -509,7 +520,7 @@ function AuthScreen({ mode, setMode, error, setError, onLogin, onRegister, onBac
         ) : mode === "register" ? (
           <div className="auth-card wide">
             <h2>Create alumni account</h2>
-            <p className="muted">Register once \u2014 the registrar's office will verify your record before you can log in.</p>
+            <p className="muted">Register once — the registrar's office will verify your record before you can log in.</p>
             {error && <div className="auth-error"><AlertCircle size={15} />{error}</div>}
             <div className="form-grid">
               <Field label="Full name"><input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} placeholder="Juan Dela Cruz" /></Field>
@@ -545,7 +556,7 @@ function AuthScreen({ mode, setMode, error, setError, onLogin, onRegister, onBac
             <button className="btn primary block" onClick={() => onLogin(email, password)}>Log in</button>
             <button className="link-btn" onClick={() => { setMode("register"); setError(""); }}>New alumnus? Create an account</button>
             {onBackHome && <button className="link-btn small" onClick={onBackHome}><ArrowLeft size={13} />Back to Home</button>}
-            <div className="demo-hint">Demo \u2014 Alumni: maria.santos@example.com / alumni123</div>
+            <div className="demo-hint">Demo — Alumni: maria.santos@example.com / alumni123</div>
           </div>
         )}
       </div>
@@ -578,7 +589,7 @@ function LandingPage({ onAdminLogin, onAlumniPortal }) {
           <h1>Centralized Alumni<br />Monitoring System</h1>
           <p>One record, every campus. Track employment outcomes, keep alumni connected, and give ZDSPGC leadership the data it needs to plan ahead.</p>
           <ul className="side-list dark">
-            <li>Pagadian Main \u00b7 Molave \u00b7 Guipos \u00b7 Aurora \u00b7 San Miguel</li>
+            <li>14 campuses across Zamboanga del Sur</li>
             <li>Employment monitoring across every course</li>
             <li>Announcements, surveys, and job postings in one place</li>
           </ul>
@@ -588,13 +599,13 @@ function LandingPage({ onAdminLogin, onAlumniPortal }) {
           </div>
         </div>
         <div className="landing-hero-panel">
-          <div className="landing-stat"><Building2 size={18} /><div><strong>5</strong><span>Campuses</span></div></div>
+          <div className="landing-stat"><Building2 size={18} /><div><strong>14</strong><span>Campuses</span></div></div>
           <div className="landing-stat"><Users size={18} /><div><strong>Live</strong><span>Alumni records</span></div></div>
           <div className="landing-stat"><Briefcase size={18} /><div><strong>Tracked</strong><span>Employment outcomes</span></div></div>
         </div>
       </section>
 
-      <footer className="landing-foot">\u00a9 {new Date().getFullYear()} ZDSPGC \u2014 Centralized Alumni Monitoring System</footer>
+      <footer className="landing-foot">© {new Date().getFullYear()} ZDSPGC — Centralized Alumni Monitoring System</footer>
     </div>
   );
 }
@@ -617,10 +628,10 @@ function AdminLoginScreen({ error, setError, onLogin, onBackHome, onForgot }) {
         <div className="auth-side-inner">
           <div className="brand-mark"><ShieldCheck size={26} /></div>
           <h1>Admin<br />Access Portal</h1>
-          <p>Restricted to ZDSPGC Super Admin and Campus Admin accounts. Admin accounts are provisioned by the Super Admin only \u2014 there is no public admin sign-up.</p>
+          <p>Restricted to ZDSPGC Super Admin and Campus Admin accounts. Admin accounts are provisioned by the Super Admin only — there is no public admin sign-up.</p>
           <ul className="side-list">
-            <li>Super Admin \u2014 full system access, every campus</li>
-            <li>Campus Admin \u2014 scoped to their assigned campus</li>
+            <li>Super Admin — full system access, every campus</li>
+            <li>Campus Admin — scoped to their assigned campus</li>
           </ul>
         </div>
       </div>
@@ -642,7 +653,7 @@ function AdminLoginScreen({ error, setError, onLogin, onBackHome, onForgot }) {
           <button className="link-btn small" onClick={onForgot}>Forgot Password?</button>
           <button className="btn primary block" onClick={submit} disabled={!identifier.trim() || !password}>Login</button>
           <button className="btn ghost block" onClick={onBackHome}><ArrowLeft size={15} />Back to Home</button>
-          <div className="demo-hint">Demo \u2014 Super Admin: superadmin@zdspgc.edu.ph / SuperAdmin!123 &nbsp;\u00b7&nbsp; Campus Admin: molave.admin@zdspgc.edu.ph / Campus!123</div>
+          <div className="demo-hint">Demo — Super Admin: superadmin@zdspgc.edu.ph / SuperAdmin!123 &nbsp;·&nbsp; Campus Admin: aurora.admin@zdspgc.edu.ph / Campus!123</div>
         </div>
       </div>
     </div>
@@ -700,7 +711,7 @@ const ADMIN_NAV = [
   { id: "reports", label: "Reports", icon: BarChart3 },
 ];
 
-// Only the Super Admin sees these \u2014 account management and the system-wide audit trail.
+// Only the Super Admin sees these — account management and the system-wide audit trail.
 const SUPERADMIN_NAV = [
   { id: "manageAdmins", label: "Manage Admin Accounts", icon: UserCog },
   { id: "activityLogs", label: "Activity Logs", icon: History },
@@ -718,7 +729,7 @@ function AdminShell({ db, update, tab, setTab, onLogout, showToast, adminName, r
     <div className="shell">
       <Sidebar
         nav={nav} tab={tab} setTab={setTab} onLogout={onLogout} badgeMap={{ verification: pendingCount }}
-        roleLabel={isSuperAdmin ? "Super Admin" : `Campus Admin \u2014 ${scopeCampus}`}
+        roleLabel={isSuperAdmin ? "Super Admin" : `Campus Admin — ${scopeCampus}`}
         personName={adminName}
       />
       <main className="main">
@@ -731,7 +742,7 @@ function AdminShell({ db, update, tab, setTab, onLogout, showToast, adminName, r
         {tab === "jobs" && <JobsAdmin db={db} update={update} showToast={showToast} />}
         {tab === "posts" && <PostsAdmin db={db} update={update} showToast={showToast} />}
         {tab === "reports" && <Reports db={scopedDb} />}
-        {/* Manage Admin Accounts and Activity Logs are Super Admin\u2013only. Even if a Campus
+        {/* Manage Admin Accounts and Activity Logs are Super Admin–only. Even if a Campus
             Admin somehow set tab to these ids, isSuperAdmin below blocks the render. */}
         {tab === "manageAdmins" && isSuperAdmin && <ManageAdmins db={db} update={update} showToast={showToast} addLog={addLog} currentUserId={currentUserId} />}
         {tab === "activityLogs" && isSuperAdmin && <ActivityLogs db={db} />}
@@ -800,7 +811,7 @@ function AdminDashboard({ db, setTab }) {
     { name: "Unemployed", value: unemployed },
   ].filter((d) => d.value > 0);
 
-  const perCampus = CAMPUSES.map((c) => ({ name: c.replace(" Campus", "").replace("Pagadian Main", "Pagadian"), value: db.alumni.filter((a) => a.campus === c).length }));
+  const perCampus = CAMPUSES.map((c) => ({ name: c.replace(" Campus", ""), value: db.alumni.filter((a) => a.campus === c).length }));
   const perCourse = COURSES.map((c) => ({ name: c.replace("BS ", ""), value: db.alumni.filter((a) => a.course === c).length }));
 
   const recentAlumni = [...db.alumni].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
@@ -867,7 +878,7 @@ function AdminDashboard({ db, setTab }) {
                 <div className="mini-avatar">{a.fullName[0]}</div>
                 <div className="mini-info">
                   <div className="mini-name">{a.fullName}</div>
-                  <div className="mini-sub">{a.course} \u00b7 {a.campus}</div>
+                  <div className="mini-sub">{a.course} · {a.campus}</div>
                 </div>
                 <Seal status={a.accountStatus} />
               </li>
@@ -966,7 +977,7 @@ function AlumniRecords({ db, update, showToast, lockCampus }) {
       />
 
       <div className="filter-bar">
-        <div className="search-box"><Search size={15} /><input placeholder="Search name or email\u2026" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+        <div className="search-box"><Search size={15} /><input placeholder="Search name or email…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         {lockCampus ? (
           <span className="badge-soft"><Building2 size={12} /> {lockCampus}</span>
         ) : (
@@ -1016,7 +1027,7 @@ function AlumniRecords({ db, update, showToast, lockCampus }) {
 }
 
 function ImportAlumniModal({ db, lockCampus, onClose, onImport }) {
-  const [mode, setMode] = useState("paste"); // "paste" | "file" \u2014 paste-in is the fastest path, so lead with it
+  const [mode, setMode] = useState("paste"); // "paste" | "file" — paste-in is the fastest path, so lead with it
   const [fileName, setFileName] = useState("");
   const [pasteText, setPasteText] = useState("");
   const [rows, setRows] = useState(null); // validated rows, or null before data has been parsed
@@ -1055,7 +1066,7 @@ function ImportAlumniModal({ db, lockCampus, onClose, onImport }) {
 
   return (
     <Modal title="Import Student / Alumni Records" onClose={onClose} wide>
-      <p className="muted">Add many alumni records at once, right here \u2014 no separate file required. Each valid row also gets a login account with the temporary password <strong>Alumni@2026</strong>.</p>
+      <p className="muted">Add many alumni records at once, right here — no separate file required. Each valid row also gets a login account with the temporary password <strong>Alumni@2026</strong>.</p>
       {lockCampus && <div className="badge-soft mt"><Building2 size={12} /> All imported records will be assigned to {lockCampus}</div>}
 
       <div className="tab-toggle mt">
@@ -1073,7 +1084,7 @@ function ImportAlumniModal({ db, lockCampus, onClose, onImport }) {
             <span>Paste rows here (include the header row)</span>
             <textarea
               rows={7}
-              placeholder={"Full Name\tEmail\tCampus\tCourse\tGraduation Year\u2026\nJuan Dela Cruz\tjuan@example.com\tPagadian Main Campus\tBS Information Technology\t2024"}
+              placeholder={"Full Name\tEmail\tCampus\tCourse\tGraduation Year\u2026\nJuan Dela Cruz\tjuan@example.com\tAurora Campus\tBS Agriculture\t2024"}
               value={pasteText}
               onChange={(e) => handlePasteChange(e.target.value)}
             />
@@ -1108,9 +1119,9 @@ function ImportAlumniModal({ db, lockCampus, onClose, onImport }) {
                 {rows.map((r) => (
                   <tr key={r.rowNum}>
                     <td>{r.rowNum}</td>
-                    <td>{r.fullName || "\u2014"}</td>
-                    <td>{r.email || "\u2014"}</td>
-                    <td>{r.campus || "\u2014"}</td>
+                    <td>{r.fullName || "—"}</td>
+                    <td>{r.email || "—"}</td>
+                    <td>{r.campus || "—"}</td>
                     <td>{r.valid ? <Seal status="approved" /> : <span style={{ color: "var(--danger)", fontSize: ".78rem" }}>{r.errors.join("; ")}</span>}</td>
                   </tr>
                 ))}
@@ -1264,11 +1275,11 @@ function EmploymentMonitoring({ db }) {
               <tr key={a.id}>
                 <td>{a.fullName}</td>
                 <td><EmpTag status={a.employment?.status} /></td>
-                <td>{a.employment?.company || "\u2014"}</td>
-                <td>{a.employment?.position || "\u2014"}</td>
-                <td>{a.employment?.location || "\u2014"}</td>
-                <td>{a.employment?.dateEmployed ? fmtDate(a.employment.dateEmployed) : "\u2014"}</td>
-                <td>{a.employment?.status === "Unemployed" ? "\u2014" : a.employment?.related ? "Yes" : "No"}</td>
+                <td>{a.employment?.company || "—"}</td>
+                <td>{a.employment?.position || "—"}</td>
+                <td>{a.employment?.location || "—"}</td>
+                <td>{a.employment?.dateEmployed ? fmtDate(a.employment.dateEmployed) : "—"}</td>
+                <td>{a.employment?.status === "Unemployed" ? "—" : a.employment?.related ? "Yes" : "No"}</td>
               </tr>
             ))}
           </tbody>
@@ -1321,7 +1332,7 @@ function NotificationsAdmin({ db, update, showToast, lockCampus }) {
                 <div className="mini-avatar gold"><Bell size={14} /></div>
                 <div style={{ flex: 1 }}>
                   <div className="mini-name">{n.title}</div>
-                  <div className="mini-sub">{audienceLabel(n.audience)} \u00b7 {fmtDate(n.createdAt)}</div>
+                  <div className="mini-sub">{audienceLabel(n.audience)} · {fmtDate(n.createdAt)}</div>
                 </div>
                 <span className="badge-soft">{read}/{recipients.length} read</span>
               </div>
@@ -1351,9 +1362,9 @@ function ComposeNotifModal({ onClose, onSend, lockCampus }) {
   return (
     <Modal title="New announcement" onClose={onClose}>
       <Field label="Title"><input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Grand Alumni Homecoming" /></Field>
-      <Field label="Message"><textarea rows={4} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Write the announcement\u2026" /></Field>
+      <Field label="Message"><textarea rows={4} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Write the announcement…" /></Field>
       {lockCampus ? (
-        <Field label="Send to"><input value={`All alumni \u2014 ${lockCampus}`} disabled /></Field>
+        <Field label="Send to"><input value={`All alumni — ${lockCampus}`} disabled /></Field>
       ) : (
         <>
           <Field label="Send to">
@@ -1401,7 +1412,7 @@ function SurveysAdmin({ db, update, showToast }) {
           <div className="simple-card" key={s.id}>
             <ClipboardList size={18} color="#1F5D4E" />
             <div className="mini-name">{s.title}</div>
-            <div className="mini-sub">{s.questions.length} questions \u00b7 {s.responses.length} responses</div>
+            <div className="mini-sub">{s.questions.length} questions · {s.responses.length} responses</div>
             <button className="link-btn small" onClick={() => setViewing(s)}>View responses<ChevronRight size={14} /></button>
           </div>
         ))}
@@ -1439,7 +1450,7 @@ function SurveyFormModal({ onClose, onSave }) {
               <div className="qbuilder-sub">
                 <select value={q.type} onChange={(e) => setQ(q.id, { type: e.target.value })}>
                   <option value="text">Short text</option>
-                  <option value="rating">Rating (1\u20135)</option>
+                  <option value="rating">Rating (1–5)</option>
                   <option value="choice">Multiple choice</option>
                 </select>
                 {q.type === "choice" && <input placeholder="Options, comma separated" value={q.options} onChange={(e) => setQ(q.id, { options: e.target.value })} />}
@@ -1512,7 +1523,7 @@ function JobsAdmin({ db, update, showToast }) {
               <button className="icon-btn danger" onClick={() => remove(j.id)}><Trash2 size={15} /></button>
             </div>
             <div className="mini-name">{j.title}</div>
-            <div className="mini-sub">{j.company} \u00b7 {j.location}</div>
+            <div className="mini-sub">{j.company} · {j.location}</div>
             <p className="list-card-text">{j.requirements}</p>
             <div className="badge-soft">Deadline: {fmtDate(j.deadline)}</div>
           </div>
@@ -1555,7 +1566,7 @@ function PostsAdmin({ db, update, showToast }) {
 
   return (
     <div>
-      <PageHead eyebrow={`${db.posts.length} posts`} title="Community Posts \u2014 Moderation" />
+      <PageHead eyebrow={`${db.posts.length} posts`} title="Community Posts — Moderation" />
       <div className="stack">
         {sorted.map((p) => (
           <div className="list-card" key={p.id}>
@@ -1636,7 +1647,7 @@ function Reports({ db }) {
           <thead><tr><th>Name</th><th>Campus</th><th>Course</th><th>Year</th><th>Employment</th><th>Company</th></tr></thead>
           <tbody>
             {filtered.map((a) => (
-              <tr key={a.id}><td>{a.fullName}</td><td>{a.campus}</td><td>{a.course}</td><td>{a.gradYear}</td><td><EmpTag status={a.employment?.status} /></td><td>{a.employment?.company || "\u2014"}</td></tr>
+              <tr key={a.id}><td>{a.fullName}</td><td>{a.campus}</td><td>{a.course}</td><td>{a.gradYear}</td><td><EmpTag status={a.employment?.status} /></td><td>{a.employment?.company || "—"}</td></tr>
             ))}
             {!filtered.length && <tr><td colSpan={6}><EmptyState icon={BarChart3} text="No records match this report filter." /></td></tr>}
           </tbody>
@@ -1669,7 +1680,7 @@ function ManageAdmins({ db, update, showToast, addLog, currentUserId }) {
         username: form.username.trim(), password: form.password, campus: form.campus, status: form.status, createdAt: now(),
       };
       update("users", (list) => [...list, rec]);
-      addLog("Super Admin", "Created Campus Admin account", `${rec.name} \u2014 ${rec.campus}`);
+      addLog("Super Admin", "Created Campus Admin account", `${rec.name} — ${rec.campus}`);
       showToast("Campus Admin account created.");
     }
     setEditing(null);
@@ -1709,7 +1720,7 @@ function ManageAdmins({ db, update, showToast, addLog, currentUserId }) {
               return (
                 <tr key={a.id}>
                   <td><div className="cell-name"><div className="mini-avatar gold">{a.name[0]}</div>{a.name}{isSelf && <span className="badge-soft">You</span>}</div></td>
-                  <td>{a.username || "\u2014"}</td>
+                  <td>{a.username || "—"}</td>
                   <td>{a.email}</td>
                   <td>{isSuper ? "Super Admin" : "Campus Admin"}</td>
                   <td>{a.campus || "All campuses"}</td>
@@ -1774,7 +1785,7 @@ function ResetPasswordModal({ admin, onClose, onSave }) {
   const [pw, setPw] = useState("");
   const [showPw, setShowPw] = useState(false);
   return (
-    <Modal title={`Reset password \u2014 ${admin.name}`} onClose={onClose}>
+    <Modal title={`Reset password — ${admin.name}`} onClose={onClose}>
       <Field label="New Temporary Password">
         <div className="pw-wrap">
           <input type={showPw ? "text" : "password"} value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Enter new temporary password" />
@@ -1801,7 +1812,7 @@ function ActivityLogs({ db }) {
           <thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Detail</th></tr></thead>
           <tbody>
             {logs.map((l) => (
-              <tr key={l.id}><td>{new Date(l.ts).toLocaleString("en-PH")}</td><td>{l.actor}</td><td>{l.action}</td><td>{l.detail || "\u2014"}</td></tr>
+              <tr key={l.id}><td>{new Date(l.ts).toLocaleString("en-PH")}</td><td>{l.actor}</td><td>{l.action}</td><td>{l.detail || "—"}</td></tr>
             ))}
             {!logs.length && <tr><td colSpan={4}><EmptyState icon={History} text="No activity recorded yet." /></td></tr>}
           </tbody>
@@ -1859,7 +1870,7 @@ function AlumniDashboard({ db, me, setTab, myNotifs }) {
           <h3>Your record</h3>
           <div className="profile-rows">
             <div><Building2 size={14} />{me.campus}</div>
-            <div><GraduationCap size={14} />{me.course} \u00b7 Batch {me.gradYear}</div>
+            <div><GraduationCap size={14} />{me.course} · Batch {me.gradYear}</div>
             <div><Mail size={14} />{me.email}</div>
             <div><Phone size={14} />{me.phone}</div>
             <div><MapPin size={14} />{me.address}</div>
@@ -1898,7 +1909,7 @@ function AlumniProfile({ db, update, me, showToast }) {
           <div className="avatar lg">{me.fullName[0]}</div>
           <div><div className="mini-name">{me.fullName}</div><Seal status={me.accountStatus} /></div>
         </div>
-        <h4 className="section-title">School record (verified \u2014 contact registrar to correct)</h4>
+        <h4 className="section-title">School record (verified — contact registrar to correct)</h4>
         <div className="form-grid">
           <Field label="Campus"><input value={me.campus} disabled /></Field>
           <Field label="Course"><input value={me.course} disabled /></Field>
@@ -1982,7 +1993,7 @@ function AlumniJobs({ db }) {
           <div className="simple-card" key={j.id}>
             <Briefcase size={18} color="#1F5D4E" />
             <div className="mini-name">{j.title}</div>
-            <div className="mini-sub">{j.company} \u00b7 {j.location}</div>
+            <div className="mini-sub">{j.company} · {j.location}</div>
             <p className="list-card-text">{j.requirements}</p>
             <div className="badge-soft">Deadline: {fmtDate(j.deadline)}</div>
           </div>
@@ -2038,7 +2049,7 @@ function SurveyTakeModal({ survey, onClose, onSubmit }) {
             )}
             {q.type === "choice" && (
               <select value={answers[q.id] || ""} onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}>
-                <option value="">Select\u2026</option>
+                <option value="">Select…</option>
                 {(q.options || []).map((o) => <option key={o}>{o}</option>)}
               </select>
             )}
@@ -2078,7 +2089,7 @@ function AlumniPosts({ db, update, me }) {
     <div>
       <PageHead eyebrow="Community" title="Alumni Posts" />
       <div className="panel narrow">
-        <textarea rows={3} placeholder="Share something with fellow alumni\u2026" value={draft} onChange={(e) => setDraft(e.target.value)} />
+        <textarea rows={3} placeholder="Share something with fellow alumni…" value={draft} onChange={(e) => setDraft(e.target.value)} />
         <button className="btn primary" onClick={addPost} disabled={!draft.trim()}>Post</button>
       </div>
       <div className="stack">
@@ -2104,7 +2115,7 @@ function AlumniPosts({ db, update, me }) {
               </div>
             )}
             <div className="comment-input">
-              <input placeholder="Write a comment\u2026" value={commentDraft[p.id] || ""} onChange={(e) => setCommentDraft({ ...commentDraft, [p.id]: e.target.value })} onKeyDown={(e) => e.key === "Enter" && addComment(p)} />
+              <input placeholder="Write a comment…" value={commentDraft[p.id] || ""} onChange={(e) => setCommentDraft({ ...commentDraft, [p.id]: e.target.value })} onKeyDown={(e) => e.key === "Enter" && addComment(p)} />
               <button className="icon-btn" onClick={() => addComment(p)}><Send size={15} /></button>
             </div>
           </div>
