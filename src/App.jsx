@@ -17,29 +17,39 @@ import {
 const CAMPUSES = [
   "Aurora Campus",
   "Pagadian Campus",
-  "Dimataling Campus",
-  "Mahayag Campus",
+  "Josefina Campus",
+  "Midsalip Campus",
   "Tambulig Campus",
-  "Margosatubig Campus",
-  "Vincenzo A. Sagun Campus",
-  "Dumingag Campus",
-  "Guipos Campus",
-  "Sominot Campus",
-  "Tabina Campus",
-  "Tigbao Campus",
-  "Lapuyan Campus",
+  "Tukuran Campus",
+  "Mahayag Campus",
   "Ramon Magsaysay Campus",
+  "Dimataling Campus",
+  "Vincenzo Sagun Campus",
+  "Lapuyan Campus",
+  "Tigbao Campus",
+  "Molave Campus",
+  "Margosatubig Campus",
+  "Sominot Campus",
+  "Labangan Campus",
+  "Dinas Campus",
+  "San Pablo Campus",
+  "Dumalinao Campus",
+  "Tabina Campus",
 ];
 
 const COURSES = [
   "BS Agriculture",
-  "BS Information System",
   "Bachelor of Physical Education",
   "Bachelor of Technical-Vocational Teacher Education",
-  "BS Biology",
-  "Associate in Computer Technology",
-  "BS Civil Engineering",
-  "BS Psychology",
+  "BS Information Systems",
+  "BS Information Technology",
+  "BS Business Administration",
+  "BS Hospitality Management",
+  "BS Criminology",
+  "Bachelor of Elementary Education",
+  "Bachelor of Secondary Education",
+  "BTVTEd major in Computer Hardware Servicing",
+  "BS Office Administration",
 ];
 
 const GRAD_YEARS = Array.from({ length: 12 }, (_, i) => String(2014 + i));
@@ -179,13 +189,13 @@ function seedData() {
     { fullName: "Maria Santos", campus: CAMPUSES[0], course: COURSES[0], gradYear: "2019", email: "maria.santos@example.com", phone: "0917 111 2222", address: "Aurora", employment: { status: "Employed", company: "TechCorp PH", position: "Software Developer", location: "Cebu City", dateEmployed: "2020-03-01", related: true }, accountStatus: "approved" },
     { fullName: "Juan Dela Cruz", campus: CAMPUSES[1], course: COURSES[2], gradYear: "2020", email: "juan.delacruz@example.com", phone: "0917 222 3333", address: "Pagadian City", employment: { status: "Self-Employed", company: "JDC Trading", position: "Owner", location: "Pagadian City", dateEmployed: "2021-06-15", related: false }, accountStatus: "approved" },
     { fullName: "Angelica Reyes", campus: CAMPUSES[0], course: COURSES[3], gradYear: "2018", email: "angelica.reyes@example.com", phone: "0917 333 4444", address: "Aurora", employment: { status: "Employed", company: "DepEd Zamboanga del Sur", position: "Elementary Teacher", location: "Pagadian City", dateEmployed: "2019-08-01", related: true }, accountStatus: "approved" },
-    { fullName: "Mark Villanueva", campus: CAMPUSES[2], course: COURSES[4], gradYear: "2021", email: "mark.villanueva@example.com", phone: "0917 444 5555", address: "Dimataling", employment: { status: "Unemployed", company: "", position: "", location: "", dateEmployed: "", related: false }, accountStatus: "approved" },
-    { fullName: "Christine Bautista", campus: CAMPUSES[3], course: COURSES[5], gradYear: "2022", email: "christine.bautista@example.com", phone: "0917 555 6666", address: "Mahayag", employment: { status: "Employed", company: "Seda Hotel", position: "Front Desk Officer", location: "Davao City", dateEmployed: "2022-11-10", related: true }, accountStatus: "approved" },
+    { fullName: "Mark Villanueva", campus: CAMPUSES[2], course: COURSES[4], gradYear: "2021", email: "mark.villanueva@example.com", phone: "0917 444 5555", address: "Josefina", employment: { status: "Unemployed", company: "", position: "", location: "", dateEmployed: "", related: false }, accountStatus: "approved" },
+    { fullName: "Christine Bautista", campus: CAMPUSES[3], course: COURSES[5], gradYear: "2022", email: "christine.bautista@example.com", phone: "0917 555 6666", address: "Midsalip", employment: { status: "Employed", company: "Seda Hotel", position: "Front Desk Officer", location: "Davao City", dateEmployed: "2022-11-10", related: true }, accountStatus: "approved" },
     { fullName: "Rey Fernandez", campus: CAMPUSES[1], course: COURSES[0], gradYear: "2020", email: "rey.fernandez@example.com", phone: "0917 666 7777", address: "Pagadian City", employment: { status: "Employed", company: "Globe Telecom", position: "IT Support", location: "Zamboanga City", dateEmployed: "2021-01-20", related: true }, accountStatus: "approved" },
     { fullName: "Kim Aquino", campus: CAMPUSES[0], course: COURSES[1], gradYear: "2023", email: "kim.aquino@example.com", phone: "0917 777 8888", address: "Aurora", employment: { status: "Unemployed", company: "", position: "", location: "", dateEmployed: "", related: false }, accountStatus: "pending" },
     { fullName: "Paolo Ramos", campus: CAMPUSES[4], course: COURSES[2], gradYear: "2019", email: "paolo.ramos@example.com", phone: "0917 888 9999", address: "Tambulig", employment: { status: "Self-Employed", company: "Ramos Agri-Supply", position: "Manager", location: "Tambulig", dateEmployed: "2020-02-01", related: true }, accountStatus: "approved" },
-    { fullName: "Diane Cortez", campus: CAMPUSES[2], course: COURSES[3], gradYear: "2024", email: "diane.cortez@example.com", phone: "0917 999 0000", address: "Dimataling", employment: { status: "Unemployed", company: "", position: "", location: "", dateEmployed: "", related: false }, accountStatus: "pending" },
-    { fullName: "Ivan Mendoza", campus: CAMPUSES[3], course: COURSES[4], gradYear: "2021", email: "ivan.mendoza@example.com", phone: "0917 000 1111", address: "Mahayag", employment: { status: "Employed", company: "Nestle Philippines", position: "Field Agriculturist", location: "Cagayan de Oro", dateEmployed: "2021-09-05", related: true }, accountStatus: "approved" },
+    { fullName: "Diane Cortez", campus: CAMPUSES[2], course: COURSES[3], gradYear: "2024", email: "diane.cortez@example.com", phone: "0917 999 0000", address: "Josefina", employment: { status: "Unemployed", company: "", position: "", location: "", dateEmployed: "", related: false }, accountStatus: "pending" },
+    { fullName: "Ivan Mendoza", campus: CAMPUSES[3], course: COURSES[4], gradYear: "2021", email: "ivan.mendoza@example.com", phone: "0917 000 1111", address: "Midsalip", employment: { status: "Employed", company: "Nestle Philippines", position: "Field Agriculturist", location: "Cagayan de Oro", dateEmployed: "2021-09-05", related: true }, accountStatus: "approved" },
   ];
 
   const alumni = alumniSeed.map((a) => ({ id: uid("al"), ...a, createdAt: now(), updatedAt: now() }));
@@ -503,7 +513,7 @@ function AuthScreen({ mode, setMode, error, setError, onLogin, onRegister, onBac
           <h1>ZDSPGC<br />Centralized Alumni<br />Monitoring System</h1>
           <p>One record, every campus. Track employment outcomes, keep alumni connected, and give ZDSPGC leadership the data it needs to plan ahead.</p>
           <ul className="side-list">
-            <li>14 campuses across Zamboanga del Sur</li>
+            <li>20 campuses across Zamboanga del Sur</li>
             <li>Employment monitoring across every course</li>
             <li>Announcements, surveys, and job postings in one place</li>
           </ul>
@@ -589,7 +599,7 @@ function LandingPage({ onAdminLogin, onAlumniPortal }) {
           <h1>Centralized Alumni<br />Monitoring System</h1>
           <p>One record, every campus. Track employment outcomes, keep alumni connected, and give ZDSPGC leadership the data it needs to plan ahead.</p>
           <ul className="side-list dark">
-            <li>14 campuses across Zamboanga del Sur</li>
+            <li>20 campuses across Zamboanga del Sur</li>
             <li>Employment monitoring across every course</li>
             <li>Announcements, surveys, and job postings in one place</li>
           </ul>
@@ -599,7 +609,7 @@ function LandingPage({ onAdminLogin, onAlumniPortal }) {
           </div>
         </div>
         <div className="landing-hero-panel">
-          <div className="landing-stat"><Building2 size={18} /><div><strong>14</strong><span>Campuses</span></div></div>
+          <div className="landing-stat"><Building2 size={18} /><div><strong>20</strong><span>Campuses</span></div></div>
           <div className="landing-stat"><Users size={18} /><div><strong>Live</strong><span>Alumni records</span></div></div>
           <div className="landing-stat"><Briefcase size={18} /><div><strong>Tracked</strong><span>Employment outcomes</span></div></div>
         </div>
@@ -778,7 +788,7 @@ function Sidebar({ nav, tab, setTab, onLogout, badgeMap = {}, roleLabel, personN
             <div className="person-role">{roleLabel}</div>
           </div>
         </div>
-        <button className="logout-btn" onClick={onLogout}><LogOut size={15} />Log out</button>
+        <button className="logout-btn" onClick={onLogout}><LogOut size={15} /><span>Log out</span></button>
       </div>
     </aside>
   );
@@ -2200,13 +2210,13 @@ const CSS = `
 .sidebar-brand{ display:flex; align-items:center; gap:10px; padding:6px 8px 20px; }
 .brand-title{ font-family:'Fraunces',serif; font-weight:700; font-size:1rem; }
 .brand-sub{ font-size:.7rem; color:var(--muted); }
-.side-nav{ display:flex; flex-direction:column; gap:2px; flex:1; }
+.side-nav{ display:flex; flex-direction:column; gap:2px; flex:1; min-height:0; overflow-y:auto; }
 .side-item{ display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:9px; background:none; border:none; text-align:left; font-size:.86rem; color:var(--ink); cursor:pointer; font-weight:500; }
 .side-item:hover{ background:var(--paper); }
 .side-item.active{ background:var(--primary); color:#fff; }
 .side-badge{ margin-left:auto; background:var(--gold); color:var(--ink); font-size:.68rem; font-weight:700; padding:1px 7px; border-radius:20px; }
 .side-item.active .side-badge{ background:#fff; color:var(--primary); }
-.sidebar-foot{ border-top:1px solid var(--border); padding-top:12px; margin-top:8px; }
+.sidebar-foot{ border-top:1px solid var(--border); padding-top:12px; margin-top:8px; flex-shrink:0; }
 .person{ display:flex; align-items:center; gap:9px; padding:4px 8px 10px; }
 .person-name{ font-size:.83rem; font-weight:600; }
 .person-role{ font-size:.72rem; color:var(--muted); }
@@ -2244,7 +2254,8 @@ const CSS = `
 .search-box input{ border:none; outline:none; font-size:.85rem; width:100%; background:none; }
 
 /* ---- Table ---- */
-.table-wrap{ background:var(--paper-alt); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+.table-wrap{ background:var(--paper-alt); border:1px solid var(--border); border-radius:14px; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; }
+.table-wrap table{ min-width:560px; }
 table{ width:100%; border-collapse:collapse; font-size:.84rem; }
 thead tr{ background:var(--paper); }
 th{ text-align:left; padding:11px 14px; font-size:.72rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:700; }
@@ -2365,10 +2376,49 @@ kbd{ font-family:'IBM Plex Mono',monospace; font-size:.72rem; background:var(--p
   .landing-hero{ padding:32px 20px; }
   .landing-hero-copy h1{ font-size:1.9rem; }
   .sidebar{ width:78px; }
-  .sidebar-brand div, .side-item span, .person-name, .person-role, .brand-sub{ display:none; }
+  .sidebar-brand div, .side-item span, .person-name, .person-role, .brand-sub, .logout-btn span{ display:none; }
   .side-item{ justify-content:center; }
+  .logout-btn{ padding:8px 0; }
   .grid-2{ grid-template-columns:1fr; }
   .form-grid{ grid-template-columns:1fr; }
   .main{ padding:22px 16px; }
+}
+
+/* ---- Phone-sized screens ---- */
+@media (max-width: 640px){
+  html{ -webkit-text-size-adjust:100%; }
+  .shell{ flex-direction:column; }
+  .sidebar{
+    width:100%; height:auto; position:fixed; left:0; right:0; bottom:0; top:auto;
+    flex-direction:row; align-items:center; padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+    border-right:none; border-top:1px solid var(--border); z-index:40;
+  }
+  .sidebar-brand{ display:none; }
+  .side-nav{ flex:1; flex-direction:row; overflow-x:auto; gap:2px; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  .side-nav::-webkit-scrollbar{ display:none; }
+  .side-item{ flex-direction:column; gap:2px; padding:7px 10px; min-width:52px; flex-shrink:0; }
+  .side-badge{ position:absolute; margin-left:0; transform:translate(10px,-10px); padding:1px 5px; font-size:.62rem; }
+  .side-item{ position:relative; }
+  .sidebar-foot{ border-top:none; padding-top:0; margin-top:0; flex-shrink:0; }
+  .person{ display:none; }
+  .logout-btn{ width:auto; border:none; padding:7px 10px; flex-direction:column; gap:2px; font-size:.62rem; }
+  .main{ padding:16px 12px 84px; }
+  .page-head{ flex-direction:column; align-items:flex-start; gap:10px; }
+  .page-head h1{ font-size:1.25rem; }
+  .stat-grid{ grid-template-columns:repeat(2,1fr); gap:10px; }
+  .landing-hero-panel{ flex-direction:row; flex-wrap:wrap; }
+  .landing-stat{ flex:1; min-width:130px; }
+  .top-nav{ padding:12px 14px; }
+  .top-nav-actions{ gap:6px; }
+  .top-nav-actions .btn{ padding:8px 10px; font-size:.78rem; }
+  .landing-hero-copy h1{ font-size:1.55rem; }
+  .auth-form-side{ padding:24px 16px; }
+  .auth-card{ padding:0; }
+  .modal-backdrop{ padding:0; align-items:flex-end; }
+  .modal{ width:100%; max-width:100%; max-height:92vh; border-radius:16px 16px 0 0; }
+  .modal.modal-wide{ width:100%; }
+  .search-box{ width:100%; }
+  .filter-bar select{ flex:1; min-width:120px; }
+  .btn, .field input, .field select, .field textarea{ font-size:16px; }
 }
 `;
