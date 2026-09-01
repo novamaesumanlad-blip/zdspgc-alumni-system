@@ -926,15 +926,20 @@ function AlumniRecords({ db, update, showToast, lockCampus }) {
 
   function saveRecord(form, id) {
     const dupName = db.alumni.some((a) => a.id !== id && a.fullName.toLowerCase() === form.fullName.trim().toLowerCase() && a.gradYear === form.gradYear && a.course === form.course);
-    const dupEmail = db.alumni.some((a) => a.id !== id && a.email.toLowerCase() === form.email.trim().toLowerCase());
-    if (dupName || dupEmail) { showToast("A matching alumni record already exists."); return; }
+    const dupEmail = db.alumni.some((a) => a.id !== id && a.email.toLowerCase() === form.email.trim().toLowerCase())
+      || db.users.some((u) => u.alumniId !== id && u.email.toLowerCase() === form.email.trim().toLowerCase());
+    if (dupName || dupEmail) { showToast("A matching alumni record or email already exists."); return; }
     if (id) {
       update("alumni", (list) => list.map((a) => (a.id === id ? { ...a, ...form, updatedAt: now() } : a)));
+      // Keep the linked login's email in sync if it was changed here.
+      update("users", (list) => list.map((u) => (u.alumniId === id ? { ...u, email: form.email.trim(), name: form.fullName.trim() } : u)));
       showToast("Record updated.");
     } else {
       const rec = { id: uid("al"), ...form, employment: form.employment || { status: "Unemployed", company: "", position: "", location: "", dateEmployed: "", related: false }, accountStatus: "approved", createdAt: now(), updatedAt: now() };
+      const loginUser = { id: uid("user"), email: form.email.trim(), password: "Alumni@2026", role: "alumni", alumniId: rec.id, name: form.fullName.trim(), createdAt: now() };
       update("alumni", (list) => [...list, rec]);
-      showToast("Alumni record added.");
+      update("users", (list) => [...list, loginUser]);
+      showToast("Alumni record added \u2014 login created with temporary password Alumni@2026.");
     }
     setEditing(null);
   }
@@ -1151,6 +1156,7 @@ function AlumniFormModal({ record, onClose, onSave, lockCampus }) {
 
   return (
     <Modal title={record ? "Edit alumni record" : "Add alumni record"} onClose={onClose} wide>
+      {!record && <p className="muted" style={{ marginTop: -4, marginBottom: 12 }}>A login account is created automatically with the temporary password <strong>Alumni@2026</strong>.</p>}
       <div className="form-grid">
         <Field label="Full name"><input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} /></Field>
         <Field label="Email"><input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
