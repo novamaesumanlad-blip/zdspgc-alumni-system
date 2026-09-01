@@ -49,7 +49,7 @@ This creates a `dist/` folder containing the static site.
 ## Demo accounts
 
 - Super Admin: `superadmin@zdspgc.edu.ph` / `SuperAdmin!123`
-- Campus Admin (Molave): `molave.admin@zdspgc.edu.ph` / `Campus!123`
+- Campus Admin (Aurora): `aurora.admin@zdspgc.edu.ph` / `Campus!123`
 - Alumni: `maria.santos@example.com` / `alumni123`
 
 **Change these default passwords before sharing a live link with anyone**, since
