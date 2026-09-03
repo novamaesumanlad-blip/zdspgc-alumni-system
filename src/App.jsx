@@ -237,34 +237,116 @@ function seedData() {
   return { users, alumni, notifications, posts, surveys, jobs, logs };
 }
 
-/* ============================== STORAGE ============================== */
+/* ============================== STORAGE (Supabase) ============================== */
 
 const KEYS = ["users", "alumni", "notifications", "posts", "surveys", "jobs", "logs"];
 
-const STORAGE_PREFIX = "zdspgc_alumni_";
+// Fill these in with your Supabase Project URL and Publishable ("anon") key,
+// found under Project Settings \u2192 API Keys. The publishable key is safe to
+// ship in a browser app \u2014 never put the secret key here.
+const SUPABASE_URL = "https://xafclckrouxgjumwypct.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_6fYTCdyMwGT0vwV9pnDh3Q_kGXiK1YX";
+
+// Converts between the app's camelCase JS objects and the database's
+// snake_case columns, one converter pair per table.
+const ROW = {
+  users: {
+    toRow: (u) => ({ id: u.id, email: u.email, username: u.username ?? null, password: u.password, role: u.role, name: u.name, campus: u.campus ?? null, status: u.status ?? "active", alumni_id: u.alumniId ?? null, created_at: u.createdAt }),
+    fromRow: (r) => ({ id: r.id, email: r.email, username: r.username, password: r.password, role: r.role, name: r.name, campus: r.campus, status: r.status, alumniId: r.alumni_id, createdAt: r.created_at }),
+  },
+  alumni: {
+    toRow: (a) => ({ id: a.id, full_name: a.fullName, campus: a.campus, course: a.course, grad_year: a.gradYear, email: a.email, phone: a.phone ?? null, address: a.address ?? null, employment: a.employment ?? {}, account_status: a.accountStatus ?? "pending", created_at: a.createdAt, updated_at: a.updatedAt }),
+    fromRow: (r) => ({ id: r.id, fullName: r.full_name, campus: r.campus, course: r.course, gradYear: r.grad_year, email: r.email, phone: r.phone, address: r.address, employment: r.employment, accountStatus: r.account_status, createdAt: r.created_at, updatedAt: r.updated_at }),
+  },
+  notifications: {
+    toRow: (n) => ({ id: n.id, title: n.title, message: n.message, audience: n.audience, read_by: n.readBy ?? [], created_at: n.createdAt }),
+    fromRow: (r) => ({ id: r.id, title: r.title, message: r.message, audience: r.audience, readBy: r.read_by, createdAt: r.created_at }),
+  },
+  posts: {
+    toRow: (p) => ({ id: p.id, author_id: p.authorId, author_name: p.authorName, content: p.content, likes: p.likes ?? [], comments: p.comments ?? [], created_at: p.createdAt }),
+    fromRow: (r) => ({ id: r.id, authorId: r.author_id, authorName: r.author_name, content: r.content, likes: r.likes, comments: r.comments, createdAt: r.created_at }),
+  },
+  surveys: {
+    toRow: (s) => ({ id: s.id, title: s.title, questions: s.questions ?? [], responses: s.responses ?? [], created_at: s.createdAt }),
+    fromRow: (r) => ({ id: r.id, title: r.title, questions: r.questions, responses: r.responses, createdAt: r.created_at }),
+  },
+  jobs: {
+    toRow: (j) => ({ id: j.id, title: j.title, company: j.company, requirements: j.requirements ?? null, location: j.location ?? null, deadline: j.deadline ?? null, posted_at: j.postedAt }),
+    fromRow: (r) => ({ id: r.id, title: r.title, company: r.company, requirements: r.requirements, location: r.location, deadline: r.deadline, postedAt: r.posted_at }),
+  },
+  logs: {
+    toRow: (l) => ({ id: l.id, ts: l.ts, actor: l.actor, action: l.action, detail: l.detail ?? null }),
+    fromRow: (r) => ({ id: r.id, ts: r.ts, actor: r.actor, action: r.action, detail: r.detail }),
+  },
+};
+
+// Talks to Supabase's auto-generated REST API (PostgREST) directly via fetch \u2014
+// no extra npm package required. Uses the publishable key, which only works
+// because Row Level Security was left off for these tables during setup.
+async function sbFetch(path, options = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...options,
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Supabase request failed (${res.status}): ${text}`);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
 
 async function loadStore() {
   const out = {};
-  for (const k of KEYS) {
+  await Promise.all(KEYS.map(async (k) => {
     try {
-      const raw = localStorage.getItem(STORAGE_PREFIX + k);
-      out[k] = raw ? JSON.parse(raw) : null;
-    } catch { out[k] = null; }
-  }
-  if (KEYS.some((k) => !out[k])) {
+      const rows = await sbFetch(`${k}?select=*&order=created_at.asc`, { method: "GET" });
+      out[k] = (rows || []).map(ROW[k].fromRow);
+    } catch (e) {
+      console.error("Supabase load error:", k, e);
+      out[k] = null;
+    }
+  }));
+  // Only seeds a table the very first time it's genuinely empty (fresh database) \u2014
+  // once real data exists, this never overwrites it.
+  if (KEYS.some((k) => !out[k] || out[k].length === 0)) {
     const seeded = seedData();
     for (const k of KEYS) {
-      if (!out[k]) {
+      if (!out[k] || out[k].length === 0) {
         out[k] = seeded[k];
-        try { localStorage.setItem(STORAGE_PREFIX + k, JSON.stringify(seeded[k])); } catch {}
+        try { await persist(k, seeded[k]); } catch (e) { console.error("Supabase seed error:", k, e); }
       }
     }
   }
   return out;
 }
 
-async function persist(key, value) {
-  try { localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(value)); } catch (e) { console.error("storage error", e); }
+// Persists the full, current array for a key by upserting every row (matched
+// on id) and deleting any row no longer present in the array \u2014 this mirrors
+// how the app already treats each key as "the complete list" on every update.
+async function persist(key, arr) {
+  try {
+    const conv = ROW[key];
+    if (arr.length > 0) {
+      const rows = arr.map(conv.toRow);
+      await sbFetch(`${key}?on_conflict=id`, {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify(rows),
+      });
+      const ids = arr.map((a) => a.id).join(",");
+      await sbFetch(`${key}?id=not.in.(${ids})`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+    } else {
+      await sbFetch(`${key}?id=neq.__none__`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+    }
+  } catch (e) {
+    console.error("Supabase persist error:", key, e);
+  }
 }
 
 /* ============================== SMALL UI PARTS ============================== */
