@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   LayoutDashboard, Users, ShieldCheck, Briefcase, Bell, ClipboardList,
-  BarChart3, LogOut, Search, Plus, X, Check, Trash2,
+  MessageSquare, BarChart3, LogOut, Search, Plus, X, Check, Trash2,
   Edit2, Building2, GraduationCap, Mail, Phone, MapPin, Filter,
-  Send, Printer, Download, ChevronRight, AlertCircle,
+  ThumbsUp, Send, Printer, Download, ChevronRight, AlertCircle,
   UserCheck, UserX, Clock, Eye, EyeOff, ArrowLeft, FileSpreadsheet,
   UserCog, KeyRound, History, Home, LogIn, Lock, Power, Upload, FileText,
-  CalendarDays, Contact, Image as ImageIcon, Settings as SettingsIcon
+  CalendarDays, Contact, Heart, MessageCircle, Bookmark, Image as ImageIcon, Settings as SettingsIcon
 } from "lucide-react";
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip,
@@ -261,7 +261,7 @@ function validateImportRows(rawRows, existingAlumni, existingUsers, lockCampus) 
 
 /* ============================== STORAGE (Supabase) ============================== */
 
-const KEYS = ["users", "alumni", "notifications", "surveys", "jobs", "logs", "roster", "settings", "events", "requests"];
+const KEYS = ["users", "alumni", "notifications", "posts", "surveys", "jobs", "logs", "roster", "settings", "events", "requests"];
 // Tables the app can live without if they have not been created yet.
 const OPTIONAL_KEYS = ["roster", "settings", "events", "requests"];
 
@@ -285,6 +285,10 @@ const ROW = {
   notifications: {
     toRow: (n) => ({ id: n.id, title: n.title, message: n.message, audience: n.audience, read_by: n.readBy ?? [], created_at: n.createdAt }),
     fromRow: (r) => ({ id: r.id, title: r.title, message: r.message, audience: r.audience, readBy: r.read_by, createdAt: r.created_at }),
+  },
+  posts: {
+    toRow: (p) => ({ id: p.id, author_id: p.authorId, author_name: p.authorName, content: p.content, likes: p.likes ?? [], comments: p.comments ?? [], image: p.image ?? null, saved_by: p.savedBy ?? [], created_at: p.createdAt }),
+    fromRow: (r) => ({ id: r.id, authorId: r.author_id, authorName: r.author_name, content: r.content, likes: r.likes || [], comments: r.comments || [], image: r.image || null, savedBy: r.saved_by || [], createdAt: r.created_at }),
   },
   surveys: {
     toRow: (s) => ({ id: s.id, title: s.title, questions: s.questions ?? [], responses: s.responses ?? [], created_at: s.createdAt }),
@@ -406,6 +410,26 @@ function persistDiff(key, prevArr, nextArr) {
   writeQueue[key] = job;
   return job; // resolves true when saved, false when the server refused it
 }
+
+/* ============================== COMMUNITY HELPERS ============================== */
+const POST_TAGS = [
+  { id: "achievement", label: "Achievement", emoji: "\u{1F3C6}", color: "#C9962B", prompt: "What did you achieve? A promotion, an award, a board exam pass\u2026" },
+  { id: "job", label: "Job lead", emoji: "\u{1F4BC}", color: "#1F5D4E", prompt: "Share an opening: company, role and how to apply\u2026" },
+  { id: "question", label: "Question", emoji: "\u2753", color: "#2F6F8F", prompt: "Ask the alumni community anything\u2026" },
+  { id: "event", label: "Meetup", emoji: "\u{1F4C5}", color: "#8A5A9E", prompt: "Tell people about a gathering, seminar or reunion\u2026" },
+  { id: "story", label: "Memory", emoji: "\u2728", color: "#B23A34", prompt: "Share a memory or a lesson from your ZDSPGC days\u2026" },
+];
+const REACTS = [["clap", "\u{1F44F}"], ["celebrate", "\u{1F389}"], ["idea", "\u{1F4A1}"], ["wow", "\u{1F62E}"]];
+const REACT_EMOJI = { like: "\u2764\uFE0F", clap: "\u{1F44F}", celebrate: "\u{1F389}", idea: "\u{1F4A1}", wow: "\u{1F62E}" };
+const QUICK_EMOJI = ["\u{1F600}", "\u{1F389}", "\u{1F64F}", "\u{1F4AA}", "\u2764\uFE0F", "\u{1F393}"];
+const POST_MAX = 500;
+// A post's topic is stored as a "[tag] " prefix on its text, so no database change is needed.
+const parsePost = (c) => { const m = /^\[(\w+)\]\s*/.exec(c || ""); const tag = m ? POST_TAGS.find((t) => t.id === m[1]) : null; return tag ? { tag, text: c.slice(m[0].length) } : { tag: null, text: c || "" }; };
+// Reactions live in the same list as likes: "id" = heart, "id~clap" = another reaction.
+const reactionOf = (p, id) => { for (const e of p.likes || []) { if (e === id) return "like"; if (e.startsWith(id + "~")) return e.slice(id.length + 1); } return null; };
+const reactionCounts = (p) => { const o = {}; (p.likes || []).forEach((e) => { const k = e.includes("~") ? e.split("~").pop() : "like"; o[k] = (o[k] || 0) + 1; }); return o; };
+const withReaction = (likes, id, key) => { const base = (likes || []).filter((e) => e !== id && !e.startsWith(id + "~")); return key ? [...base, key === "like" ? id : `${id}~${key}`] : base; };
+const postScore = (p) => (p.likes || []).length + (p.comments || []).length * 2;
 
 /* ============================== SMALL UI PARTS ============================== */
 
@@ -1119,6 +1143,77 @@ function RequestsAdmin({ db, update, showToast, lockCampus }) {
   );
 }
 
+/* ============================== MESSAGES (alumni to alumni) ============================== */
+
+function AlumniMessages({ db, update, me, showToast }) {
+  const all = (db.requests || []).filter((r) => r.kind === "message" && (r.alumniId === me.id || r.targetId === me.id));
+  const partnerOf = (r) => (r.alumniId === me.id ? r.targetId : r.alumniId);
+  const [open, setOpen] = useState(null);
+  const [text, setText] = useState("");
+  const [q, setQ] = useState("");
+  const endRef = useRef(null);
+  const who = (id) => db.alumni.find((a) => a.id === id);
+  const partners = [];
+  [...all].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).forEach((r) => { const id = partnerOf(r); if (who(id) && !partners.includes(id)) partners.push(id); });
+  const thread = open ? all.filter((r) => partnerOf(r) === open).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)) : [];
+  const unread = (id) => all.filter((r) => r.targetId === me.id && r.alumniId === id && r.status === "Unread").length;
+  const unreadIds = thread.filter((r) => r.targetId === me.id && r.status === "Unread").map((r) => r.id).join(",");
+  useEffect(() => {
+    if (!unreadIds) return;
+    const ids = unreadIds.split(",");
+    update("requests", (l) => l.map((x) => (ids.includes(x.id) ? { ...x, status: "Read" } : x)));
+  }, [unreadIds]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { endRef.current?.scrollIntoView?.({ block: "end" }); }, [thread.length, open]);
+  async function send() {
+    const t = text.trim();
+    if (!t || !open) return;
+    setText("");
+    await update("requests", (l) => [...l, { id: uid("msg"), kind: "message", type: "Message", details: t, alumniId: me.id, alumniName: me.fullName, campus: me.campus, targetId: open, status: "Unread", note: "", createdAt: now(), updatedAt: now() }]);
+  }
+  const people = db.alumni.filter((a) => a.id !== me.id && a.accountStatus === "approved" && a.profile?.directory && (!q.trim() || norm(a.fullName).includes(norm(q)))).sort((a, b) => a.fullName.localeCompare(b.fullName));
+  const person = open ? who(open) : null;
+  return (
+    <div>
+      <PageHead eyebrow="Private" title="Messages" />
+      <div className="grid-2" style={{ alignItems: "start" }}>
+        <div className="panel">
+          <h3>Conversations</h3>
+          <div className="stack">
+            {partners.map((id) => (
+              <button key={id} className={"list-card" + (open === id ? " unread" : "")} style={{ textAlign: "left", cursor: "pointer" }} onClick={() => setOpen(id)}>
+                <div className="list-card-head"><Avatar src={who(id)?.profile?.photo} name={who(id)?.fullName} /><div style={{ flex: 1 }}><div className="mini-name">{who(id)?.fullName}</div><div className="mini-sub">{who(id)?.course}</div></div>{unread(id) > 0 && <span className="side-badge">{unread(id)}</span>}</div>
+              </button>
+            ))}
+            {!partners.length && <span className="muted">No conversations yet.</span>}
+          </div>
+          <h3 style={{ marginTop: 16 }}>Start a new message</h3>
+          <div className="search-box"><Search size={15} /><input placeholder="Find alumni in the directory…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+          <div className="stack" style={{ marginTop: 8, maxHeight: 220, overflow: "auto" }}>
+            {people.map((a) => (<button key={a.id} className="list-card" style={{ textAlign: "left", cursor: "pointer" }} onClick={() => { setOpen(a.id); setQ(""); }}><div className="list-card-head"><Avatar src={a.profile?.photo} name={a.fullName} /><div style={{ flex: 1 }}><div className="mini-name">{a.fullName}</div><div className="mini-sub">{a.course} · Batch {a.gradYear}</div></div></div></button>))}
+            {!people.length && <span className="muted">Only alumni who joined the Alumni Directory can be messaged.</span>}
+          </div>
+        </div>
+        <div className="panel">
+          {person ? (
+            <>
+              <h3>{person.fullName}</h3>
+              <div className="msg-thread">
+                {thread.map((r) => (<div key={r.id} className={"msg " + (r.alumniId === me.id ? "mine" : "theirs")}>{r.details}<span className="msg-time">{timeAgo(r.createdAt)}</span></div>))}
+                {!thread.length && <span className="muted">Say hello to {person.fullName.split(" ")[0]}.</span>}
+                <div ref={endRef} />
+              </div>
+              <div className="ig-comment-box">
+                <input aria-label="Type a message" placeholder="Type a message" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} />
+                <button onClick={send}>Send</button>
+              </div>
+            </>
+          ) : <EmptyState icon={MessageCircle} text="Pick a conversation or find someone to message." />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ============================== EVENTS & REUNIONS ============================== */
 
 const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
@@ -1350,7 +1445,7 @@ function PrivacyNotice({ onClose }) {
         <h4>How it is used</h4>
         <p>To verify that you are a graduate, to report employment outcomes, to send announcements and job postings, and to help the school plan its programs.</p>
         <h4>Who can see it</h4>
-        <p>The ZDSPGC Super Admin and the Campus Admin of your campus. Other alumni cannot see your record.</p>
+        <p>The ZDSPGC Super Admin and the Campus Admin of your campus. Other alumni only see what you choose to post in the community.</p>
         <h4>Your rights</h4>
         <p>Under the Data Privacy Act of 2012 (RA 10173) you may ask to see, correct or delete your information, or withdraw your consent. Contact the ZDSPGC registrar's office for any request.</p>
       </div>
@@ -1658,6 +1753,7 @@ const ADMIN_NAV = [
   { id: "jobs", label: "Job Board", icon: Briefcase },
   { id: "events", label: "Events", icon: CalendarDays },
   { id: "requests", label: "Requests", icon: FileText },
+  { id: "posts", label: "Community Posts", icon: MessageSquare },
   { id: "reports", label: "Reports", icon: BarChart3 },
 ];
 
@@ -1742,6 +1838,7 @@ function AdminShell({ db, update, tab, setTab, onLogout, showToast, adminName, r
         {t === "jobs" && <JobsAdmin db={db} update={update} showToast={showToast} />}
         {t === "requests" && <RequestsAdmin db={scopedDb} update={update} showToast={showToast} lockCampus={scopeCampus} />}
         {t === "events" && <EventsAdmin db={db} update={update} showToast={showToast} lockCampus={scopeCampus} />}
+        {t === "posts" && <PostsAdmin db={db} update={update} showToast={showToast} adminName={adminName} adminId={currentUserId} />}
         {t === "reports" && <Reports db={scopedDb} />}
         {/* Manage Admin Accounts and Activity Logs are Super Admin–only. Even if a Campus
             Admin somehow set tab to these ids, isSuperAdmin below blocks the render. */}
@@ -1807,7 +1904,7 @@ function SettingsPage({ db, update, showToast, prefs, setPrefs, sys, role, user,
     if (ok) showToast("System settings saved.");
   }
   function downloadMine() {
-    const mine = { exportedAt: now(), account: { name: user.name, email: user.email, username: user.username }, record: alumnus };
+    const mine = { exportedAt: now(), account: { name: user.name, email: user.email, username: user.username }, record: alumnus, posts: db.posts.filter((p) => p.authorId === alumnus.id) };
     saveFile("my-zdspgc-data.json", JSON.stringify(mine, null, 2), "application/json");
     showToast("Your data was downloaded.");
   }
@@ -1861,17 +1958,20 @@ function SettingsPage({ db, update, showToast, prefs, setPrefs, sys, role, user,
 
       {isAlumni && (
         <div className="set-panel">
-          <h3>Notifications</h3>
+          <h3>Notifications and community</h3>
           <p className="set-note">These follow your account on every device.</p>
           <SettingRow title="Only show announcements meant for me" desc="Hides announcements sent to all alumni. You still see ones for your campus, course or batch.">
             <Toggle label="Only show announcements meant for me" checked={!!st.onlyMine} onChange={(v) => setAlumniSetting("onlyMine", v)} />
+          </SettingRow>
+          <SettingRow title="Allow comments on my posts" desc="When off, other alumni can still like and save your posts but cannot comment.">
+            <Toggle label="Allow comments on my posts" checked={st.allowComments !== false} onChange={(v) => setAlumniSetting("allowComments", v)} />
           </SettingRow>
         </div>
       )}
 
       <div className="set-panel">
         <h3>Your data</h3>
-        {isAlumni && <SettingRow title="Download my data" desc="Your alumni record as a file."><button className="btn ghost" onClick={downloadMine}><Download size={15} />Download</button></SettingRow>}
+        {isAlumni && <SettingRow title="Download my data" desc="Your alumni record and your posts as a file."><button className="btn ghost" onClick={downloadMine}><Download size={15} />Download</button></SettingRow>}
         {isSuper && <SettingRow title="Download a full backup" desc="Every table in one file. Passwords are left out."><button className="btn ghost" onClick={downloadBackup}><Download size={15} />Download backup</button></SettingRow>}
         {!isAlumni && !isSuper && <p className="set-note" style={{ padding: "8px 0" }}>Use Reports to export your campus alumni list as a CSV.</p>}
       </div>
@@ -1925,6 +2025,7 @@ function EditProfileModal({ db, update, showToast, user, alumnus, addLog, onClos
     let ok2 = true;
     if (alumnus) {
       ok2 = await update("alumni", (list) => list.map((a) => (a.id === alumnus.id ? { ...a, fullName: name, email, phone: f.phone.trim(), address: f.address.trim(), updatedAt: now() } : a)));
+      update("posts", (list) => list.map((p) => (p.authorId === alumnus.id ? { ...p, authorName: name } : p)));
     } else if (addLog) {
       addLog(user.name, "Updated own profile");
     }
@@ -3028,6 +3129,138 @@ function JobForm({ onSubmit, onCancel }) {
   );
 }
 
+/* -------- Posts (Admin moderation) -------- */
+
+function PostsAdmin({ db, update, showToast, adminName, adminId }) {
+  const [draft, setDraft] = useState("");
+  const [photo, setPhoto] = useState("");
+  const [tag, setTag] = useState("");
+  const [tagFilter, setTagFilter] = useState("");
+  const [onlyOfficial, setOnlyOfficial] = useState(false);
+  const [q, setQ] = useState("");
+  const [reply, setReply] = useState({});
+  const fileRef = useRef(null);
+  async function pickPhoto(e) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    try { setPhoto(await compressImage(f)); } catch { showToast("That photo could not be read. Try another one."); }
+  }
+  function publish() {
+    if (!draft.trim() && !photo) return;
+    update("posts", (l) => [{ id: uid("post"), authorId: adminId, authorName: adminName, content: (tag ? `[${tag}] ` : "") + draft.trim(), image: photo || null, createdAt: now(), likes: [], comments: [], savedBy: [] }, ...l]);
+    setDraft(""); setPhoto(""); setTag("");
+    showToast("Posted to the community as an official post.");
+  }
+  function sendReply(p) {
+    const text = (reply[p.id] || "").trim();
+    if (!text) return;
+    update("posts", (l) => l.map((x) => (x.id === p.id ? { ...x, comments: [...x.comments, { id: uid("cmt"), authorId: adminId, authorName: adminName, content: text, createdAt: now() }] } : x)));
+    setReply({ ...reply, [p.id]: "" });
+  }
+  function removePost(id) { update("posts", (list) => list.filter((p) => p.id !== id)); showToast("Post removed."); }
+  function removeComment(postId, cid) { update("posts", (list) => list.map((p) => (p.id === postId ? { ...p, comments: p.comments.filter((c) => c.id !== cid) } : p))); showToast("Comment removed."); }
+
+  const all = [...db.posts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const needle = q.trim().toLowerCase();
+  const sorted = all
+    .filter((p) => !onlyOfficial || isStaff(db, p.authorId))
+    .filter((p) => !tagFilter || parsePost(p.content).tag?.id === tagFilter)
+    .filter((p) => !needle || (p.content || "").toLowerCase().includes(needle) || p.authorName.toLowerCase().includes(needle));
+  const reactions = all.reduce((n, p) => n + (p.likes || []).length, 0);
+  const comments = all.reduce((n, p) => n + (p.comments || []).length, 0);
+  const thisWeek = all.filter((p) => Date.now() - new Date(p.createdAt).getTime() < 7 * 864e5).length;
+  const tally = {};
+  all.forEach((p) => { tally[p.authorId] = tally[p.authorId] || { name: p.authorName, n: 0, id: p.authorId }; tally[p.authorId].n += 1; });
+  const top = Object.values(tally).sort((a, b) => b.n - a.n).slice(0, 3);
+  const curTag = POST_TAGS.find((t) => t.id === tag);
+
+  return (
+    <div>
+      <PageHead eyebrow={`${all.length} posts`} title="Community Posts — Moderation" />
+      <div className="stat-grid">
+        <StatCard icon={MessageSquare} label="Posts" value={all.length} ribbon="#1F5D4E" />
+        <StatCard icon={Heart} label="Reactions" value={reactions} ribbon="#B23A34" />
+        <StatCard icon={MessageCircle} label="Comments" value={comments} ribbon="#2F6F8F" />
+        <StatCard icon={Clock} label="Posts this week" value={thisWeek} ribbon="#C9962B" />
+      </div>
+      {!!top.length && (
+        <div className="panel" style={{ marginBottom: 14 }}>
+          <h3>Most active</h3>
+          <div className="chip-row">{top.map((t) => (<span className="chip" key={t.id}><Avatar src={photoOf(db, t.id)} name={t.name} className="mini-avatar sm" /> {t.name} · {t.n} post{t.n === 1 ? "" : "s"}</span>))}</div>
+        </div>
+      )}
+      <div className="panel ig-composer" style={{ marginBottom: 14 }}>
+        <div className="row-gap" style={{ alignItems: "flex-start", flexWrap: "nowrap" }}>
+          <Avatar src={photoOf(db, adminId)} name={adminName} className="mini-avatar lg" />
+          <textarea rows={2} maxLength={POST_MAX} placeholder={curTag ? curTag.prompt : "Share an official announcement or message with all alumni…"} value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") publish(); }} />
+        </div>
+        <div className="chip-row compose-tags">
+          {POST_TAGS.map((t) => (<button key={t.id} type="button" className={"chip" + (tag === t.id ? " on" : "")} style={tag === t.id ? { background: t.color, borderColor: t.color } : undefined} onClick={() => setTag(tag === t.id ? "" : t.id)}>{t.emoji} {t.label}</button>))}
+        </div>
+        {photo && (<div className="ig-preview"><img src={photo} alt="Photo preview" /><button className="btn ghost" onClick={() => setPhoto("")}>Remove photo</button></div>)}
+        <div className="ig-composer-actions">
+          <div className="row-gap" style={{ gap: 4 }}>
+            <input ref={fileRef} type="file" accept="image/*" hidden onChange={pickPhoto} />
+            <button className="btn ghost" onClick={() => fileRef.current?.click()}><ImageIcon size={16} />Photo</button>
+            {QUICK_EMOJI.map((e) => (<button key={e} type="button" className="emoji-btn" aria-label={`Add ${e}`} onClick={() => setDraft((d) => (d + e).slice(0, POST_MAX))}>{e}</button>))}
+          </div>
+          <div className="row-gap">
+            <span className="char-count">{draft.length}/{POST_MAX}</span>
+            <button className="btn primary" onClick={publish} disabled={!draft.trim() && !photo}><Send size={15} />Post to community</button>
+          </div>
+        </div>
+      </div>
+      <div className="ig-chips">
+        <div className="search-box"><Search size={14} /><input aria-label="Search community posts" placeholder="Search posts or people" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+        <div className="chip-row">
+          <button className={"chip" + (!tagFilter && !onlyOfficial ? " on" : "")} onClick={() => { setTagFilter(""); setOnlyOfficial(false); }}>All</button>
+          <button className={"chip" + (onlyOfficial ? " on" : "")} onClick={() => setOnlyOfficial(!onlyOfficial)}>Official only</button>
+          {POST_TAGS.map((t) => (<button key={t.id} className={"chip" + (tagFilter === t.id ? " on" : "")} onClick={() => setTagFilter(tagFilter === t.id ? "" : t.id)}>{t.emoji} {t.label}</button>))}
+        </div>
+      </div>
+      <div className="stack">
+        {sorted.map((p) => {
+          const parsed = parsePost(p.content);
+          const rc = reactionCounts(p);
+          return (
+            <article className="list-card ig-post" key={p.id} style={parsed.tag ? { borderLeft: `4px solid ${parsed.tag.color}` } : undefined}>
+              <div className="ig-head">
+                <Avatar src={photoOf(db, p.authorId)} name={p.authorName} />
+                <div style={{ flex: 1 }}>
+                  <div className="mini-name">{p.authorName}{isStaff(db, p.authorId) && <span className="staff-chip">Official</span>}</div>
+                  <div className="mini-sub">{timeAgo(p.createdAt)}</div>
+                </div>
+                {parsed.tag && <span className="tag-pill" style={{ background: parsed.tag.color }}>{parsed.tag.emoji} {parsed.tag.label}</span>}
+                <button className="icon-btn danger" aria-label="Delete post" onClick={() => removePost(p.id)}><Trash2 size={15} /></button>
+              </div>
+              {parsed.text && <p className="list-card-text ig-text" style={{ padding: "0 14px" }}>{parsed.text}</p>}
+              {p.image && <img className="admin-post-img" src={p.image} alt={`Photo posted by ${p.authorName}`} />}
+              <div className="react-sum" style={{ padding: "0 14px" }}>{(p.likes || []).length ? Object.entries(rc).map(([k, n]) => `${REACT_EMOJI[k] || ""} ${n}`).join("   ") : "No reactions yet"} · {p.comments.length} comment{p.comments.length === 1 ? "" : "s"}</div>
+              {!!p.comments.length && (
+                <div className="comment-list">
+                  {p.comments.map((c) => (
+                    <div className="comment-row" key={c.id}>
+                      <Avatar src={photoOf(db, c.authorId)} name={c.authorName} className="mini-avatar sm" />
+                      <div style={{ flex: 1 }}><strong>{c.authorName}</strong> <span className="muted">{c.content}</span>{(c.likes || []).length > 0 && <span className="mini-sub"> · ♥ {c.likes.length}</span>}</div>
+                      <button className="icon-btn danger" aria-label="Delete comment" onClick={() => removeComment(p.id, c.id)}><Trash2 size={13} /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="ig-comment-box" style={{ marginTop: 8 }}>
+                <input aria-label="Reply as admin" placeholder="Reply as admin…" value={reply[p.id] || ""} onChange={(e) => setReply({ ...reply, [p.id]: e.target.value })} onKeyDown={(e) => e.key === "Enter" && sendReply(p)} />
+                <button onClick={() => sendReply(p)}>Reply</button>
+              </div>
+            </article>
+          );
+        })}
+        {!sorted.length && <EmptyState icon={MessageSquare} text={all.length ? "No posts match these filters." : "No community posts yet. Post the first announcement above."} />}
+      </div>
+    </div>
+  );
+}
+
 /* -------- Reports -------- */
 
 function Reports({ db }) {
@@ -3269,8 +3502,10 @@ const ALUMNI_NAV = [
   { id: "surveys", label: "Surveys", icon: ClipboardList },
   { id: "events", label: "Events", icon: CalendarDays },
   { id: "directory", label: "Alumni Directory", icon: Contact },
+  { id: "messages", label: "Messages", icon: MessageCircle },
   { id: "services", label: "Services", icon: FileText },
   { id: "idcard", label: "My Alumni ID", icon: GraduationCap },
+  { id: "posts", label: "Community", icon: MessageSquare },
 ];
 
 function AlumniShell({ db, update, tab, setTab, onLogout, showToast, me, meUser, prefs, setPrefs, sys }) {
@@ -3281,7 +3516,7 @@ function AlumniShell({ db, update, tab, setTab, onLogout, showToast, me, meUser,
 
   return (
     <div className="shell">
-      <Sidebar nav={ALUMNI_NAV} tab={t} setTab={setTab} onLogout={onLogout} badgeMap={{ notifications: unread, services: (db.requests || []).filter((r) => r.kind === "mentorship" && r.targetId === me.id && r.status === "Pending").length }} roleLabel="Alumni" personName={me.fullName} />
+      <Sidebar nav={ALUMNI_NAV} tab={t} setTab={setTab} onLogout={onLogout} badgeMap={{ notifications: unread, messages: (db.requests || []).filter((r) => r.kind === "message" && r.targetId === me.id && r.status === "Unread").length, services: (db.requests || []).filter((r) => r.kind === "mentorship" && r.targetId === me.id && r.status === "Pending").length }} roleLabel="Alumni" personName={me.fullName} />
       <main className="main">
         <TopBar name={me.fullName} roleLabel="Alumni" photo={me.profile?.photo} onProfile={() => setTab("profile")} onEdit={() => setEditingMe(true)} onSettings={() => setTab("settings")} onLogout={onLogout} />
         {editingMe && <EditProfileModal db={db} update={update} showToast={showToast} user={meUser} alumnus={me} onClose={() => setEditingMe(false)} />}
@@ -3293,9 +3528,11 @@ function AlumniShell({ db, update, tab, setTab, onLogout, showToast, me, meUser,
         {t === "jobs" && <AlumniJobs db={db} update={update} me={me} showToast={showToast} />}
         {t === "surveys" && <AlumniSurveys db={db} update={update} me={me} showToast={showToast} />}
         {t === "events" && <AlumniEvents db={db} update={update} me={me} showToast={showToast} />}
+        {t === "messages" && <AlumniMessages db={db} update={update} me={me} showToast={showToast} />}
         {t === "services" && <AlumniServices db={db} update={update} me={me} showToast={showToast} />}
         {t === "idcard" && <AlumniIdCard me={me} />}
         {t === "directory" && <AlumniDirectory db={db} update={update} me={me} showToast={showToast} />}
+        {t === "posts" && <AlumniPosts db={db} update={update} me={me} showToast={showToast} />}
       </main>
     </div>
   );
@@ -3576,6 +3813,263 @@ function SurveyTakeModal({ survey, onClose, onSubmit }) {
         <button className="btn primary" onClick={() => onSubmit(survey, answers)}>Submit response</button>
       </div>
     </Modal>
+  );
+}
+
+function AlumniPosts({ db, update, me, showToast }) {
+  const [draft, setDraft] = useState("");
+  const [photo, setPhoto] = useState("");
+  const [filter, setFilter] = useState("all"); // all | saved | <authorId>
+  const [expanded, setExpanded] = useState({});
+  const [commentDraft, setCommentDraft] = useState({});
+  const [burst, setBurst] = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [editText, setEditText] = useState("");
+  const [tag, setTag] = useState("");
+  const [tagFilter, setTagFilter] = useState("");
+  const [q, setQ] = useState("");
+  const fileRef = useRef(null);
+  const draftRef = useRef(null);
+  function saveEdit(p) {
+    const old = parsePost(p.content);
+    if (!editText.trim() && !p.image) return;
+    update("posts", (list) => list.map((x) => (x.id === p.id ? { ...x, content: (old.tag ? `[${old.tag.id}] ` : "") + editText.trim(), edited: true } : x)));
+    setEditing(null); showToast("Post updated.");
+  }
+  function removeMyComment(p, cid) { update("posts", (list) => list.map((x) => (x.id === p.id ? { ...x, comments: x.comments.filter((c) => c.id !== cid) } : x))); }
+
+  const sorted = [...db.posts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const isPinned = (p) => isStaff(db, p.authorId) && Date.now() - new Date(p.createdAt).getTime() < 7 * 864e5;
+  const needle = q.trim().toLowerCase();
+  let visible = sorted.filter((p) => filter === "all" ? true : filter === "saved" ? (p.savedBy || []).includes(me.id) : filter === "official" ? isStaff(db, p.authorId) : p.authorId === filter)
+    .filter((p) => !tagFilter || tagFilter === "trending" || parsePost(p.content).tag?.id === tagFilter)
+    .filter((p) => !needle || (p.content || "").toLowerCase().includes(needle) || p.authorName.toLowerCase().includes(needle));
+  if (tagFilter === "trending") visible = visible.filter((p) => postScore(p) > 0).sort((a, b) => postScore(b) - postScore(a));
+  else if (filter === "all" && !tagFilter && !needle) visible = [...visible.filter(isPinned), ...visible.filter((p) => !isPinned(p))];
+  // People in the strip: everyone who has posted, plus alumni who joined the directory.
+  const authors = [];
+  sorted.forEach((p) => { if (!isStaff(db, p.authorId) && !authors.some((a) => a.id === p.authorId)) authors.push({ id: p.authorId, name: p.authorName }); });
+  db.alumni.forEach((a) => { if (a.accountStatus === "approved" && a.profile?.directory && !authors.some((x) => x.id === a.id)) authors.push({ id: a.id, name: a.fullName }); });
+  authors.sort((x, y) => (x.id === me.id ? -1 : y.id === me.id ? 1 : 0));
+  const hasOfficial = sorted.some((p) => isStaff(db, p.authorId));
+  const savedCount = sorted.filter((p) => (p.savedBy || []).includes(me.id)).length;
+  const recent = (id) => sorted.some((p) => p.authorId === id && Date.now() - new Date(p.createdAt).getTime() < 864e5);
+  const person = !["all", "saved", "official"].includes(filter) ? db.alumni.find((a) => a.id === filter) : null;
+
+  async function pickPhoto(e) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    try { setPhoto(await compressImage(f)); } catch { showToast("That photo could not be read. Try another one."); }
+    e.target.value = "";
+  }
+  function addPost() {
+    if (!draft.trim() && !photo) return;
+    update("posts", (list) => [{ id: uid("post"), authorId: me.id, authorName: me.fullName, content: (tag ? `[${tag}] ` : "") + draft.trim(), image: photo || null, createdAt: now(), likes: [], comments: [], savedBy: [] }, ...list]);
+    setDraft(""); setPhoto(""); setTag(""); setFilter("all"); setTagFilter(""); setQ("");
+    showToast("Posted.");
+  }
+  function like(p, forceOn) {
+    update("posts", (list) => list.map((x) => {
+      if (x.id !== p.id) return x;
+      const cur = reactionOf(x, me.id);
+      if (forceOn && cur === "like") return x;
+      return { ...x, likes: withReaction(x.likes, me.id, cur === "like" ? null : "like") };
+    }));
+  }
+  function react(p, key) {
+    update("posts", (list) => list.map((x) => (x.id === p.id ? { ...x, likes: withReaction(x.likes, me.id, reactionOf(x, me.id) === key ? null : key) } : x)));
+  }
+  function likeComment(p, c) {
+    update("posts", (list) => list.map((x) => (x.id === p.id ? { ...x, comments: x.comments.map((y) => (y.id === c.id ? { ...y, likes: (y.likes || []).includes(me.id) ? y.likes.filter((i) => i !== me.id) : [...(y.likes || []), me.id] } : y)) } : x)));
+  }
+  const renderText = (text) => text.split(/(#[\p{L}\p{N}_]+)/u).map((part, i) => (/^#/.test(part) ? <button key={i} className="hashtag" onClick={() => { setQ(part); setFilter("all"); setTagFilter(""); }}>{part}</button> : <React.Fragment key={i}>{part}</React.Fragment>));
+  // "Celebrate": birthdays this week and newly joined alumni. Only people who joined the directory appear.
+  const [greeted, setGreeted] = useState([]);
+  const dayMs = 864e5;
+  const bdays = db.alumni.filter((a) => a.id !== me.id && a.accountStatus === "approved" && a.profile?.directory && /^\d{4}-\d{2}-\d{2}$/.test(a.profile?.dob || "")).map((a) => {
+    const [, m, d] = a.profile.dob.split("-").map(Number);
+    const t = new Date(); t.setHours(0, 0, 0, 0);
+    for (let i = 0; i <= 7; i++) { const x = new Date(t.getTime() + i * dayMs); if (x.getMonth() + 1 === m && x.getDate() === d) return { a, in: i, label: i === 0 ? "today" : i === 1 ? "tomorrow" : x.toLocaleDateString("en-PH", { weekday: "long" }) }; }
+    return null;
+  }).filter(Boolean).sort((x, y) => x.in - y.in);
+  const newcomers = db.alumni.filter((a) => a.id !== me.id && a.accountStatus === "approved" && a.profile?.directory && a.createdAt && Date.now() - new Date(a.createdAt).getTime() < 30 * dayMs).slice(0, 6);
+  function greet(a, text, key) {
+    update("requests", (l) => [...l, { id: uid("msg"), kind: "message", type: "Message", details: text, alumniId: me.id, alumniName: me.fullName, campus: me.campus, targetId: a.id, status: "Unread", note: "", createdAt: now(), updatedAt: now() }]);
+    setGreeted((g) => [...g, key]);
+    showToast(`Greeting sent to ${a.fullName.split(" ")[0]}. They will see it in Messages.`);
+  }
+  const curTag = POST_TAGS.find((t) => t.id === tag);
+  const addEmoji = (e) => { setDraft((d) => (d + e).slice(0, POST_MAX)); draftRef.current?.focus(); };
+  function doubleTapLike(p) { like(p, true); setBurst(p.id); setTimeout(() => setBurst((b) => (b === p.id ? null : b)), 700); }
+  function toggleSave(p) {
+    const saved = (p.savedBy || []).includes(me.id);
+    update("posts", (list) => list.map((x) => (x.id === p.id ? { ...x, savedBy: saved ? (x.savedBy || []).filter((id) => id !== me.id) : [...(x.savedBy || []), me.id] } : x)));
+    showToast(saved ? "Removed from saved." : "Saved to your bookmarks.");
+  }
+  function share(p) {
+    const link = `${window.location.origin}${window.location.pathname}#/posts`;
+    const done = () => showToast("Link copied.");
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(link).then(done, () => showToast("Copying is not available in this browser."));
+    else showToast("Copying is not available in this browser.");
+  }
+  function addComment(p) {
+    const text = (commentDraft[p.id] || "").trim();
+    if (!text) return;
+    update("posts", (list) => list.map((x) => (x.id === p.id ? { ...x, comments: [...x.comments, { id: uid("cmt"), authorId: me.id, authorName: me.fullName, content: text, createdAt: now() }] } : x)));
+    setCommentDraft({ ...commentDraft, [p.id]: "" });
+    setExpanded({ ...expanded, [p.id]: true });
+  }
+  function removePost(p) { update("posts", (list) => list.filter((x) => x.id !== p.id)); showToast("Post deleted."); }
+
+  return (
+    <div>
+      <PageHead eyebrow="Community" title="Alumni Posts" />
+      <div className="ig-wrap">
+        <div className="ig-stories">
+          <button className={"ig-story" + (filter === "all" ? " on" : "")} onClick={() => setFilter("all")}><span className="ig-ring"><span className="mini-avatar"><Home size={18} /></span></span>All</button>
+          {hasOfficial && <button className={"ig-story" + (filter === "official" ? " on" : "")} onClick={() => setFilter("official")}><span className="ig-ring"><span className="mini-avatar gold"><GraduationCap size={18} /></span></span>Official</button>}
+          <button className={"ig-story" + (filter === "saved" ? " on" : "")} onClick={() => setFilter("saved")}><span className="ig-ring"><span className="mini-avatar"><Bookmark size={18} /></span></span>Saved{savedCount ? ` (${savedCount})` : ""}</button>
+          {authors.map((a) => (
+            <button key={a.id} className={"ig-story" + (filter === a.id ? " on" : "") + (recent(a.id) ? " fresh" : "")} onClick={() => setFilter(a.id)} aria-label={`Posts by ${a.name}`}>
+              <span className="ig-ring"><Avatar src={photoOf(db, a.id)} name={a.name} /></span>{a.id === me.id ? "You" : a.name.split(" ")[0]}
+            </button>
+          ))}
+        </div>
+
+        {(bdays.length > 0 || newcomers.length > 0) && (
+          <div className="panel celebrate">
+            {bdays.length > 0 && (<>
+              <h3>{"\u{1F382}"} Birthdays this week</h3>
+              <div className="stack">
+                {bdays.map(({ a, label }) => (
+                  <div className="cel-row" key={a.id}>
+                    <Avatar src={a.profile?.photo} name={a.fullName} />
+                    <div style={{ flex: 1, minWidth: 0 }}><div className="mini-name">{a.fullName}</div><div className="mini-sub">{label === "today" ? "Today!" : label === "tomorrow" ? "Tomorrow" : label}</div></div>
+                    <button className="btn ghost" disabled={greeted.includes("b" + a.id)} onClick={() => greet(a, `Happy birthday, ${a.fullName.split(" ")[0]}! \u{1F382}\u{1F389} Wishing you a great year ahead. \u2014 ${me.fullName}`, "b" + a.id)}>{greeted.includes("b" + a.id) ? "Sent" : "\u{1F389} Greet"}</button>
+                  </div>
+                ))}
+              </div>
+            </>)}
+            {newcomers.length > 0 && (<>
+              <h3 style={bdays.length ? { marginTop: 14 } : undefined}>{"\u{1F44B}"} Welcome our newest alumni</h3>
+              <div className="stack">
+                {newcomers.map((a) => (
+                  <div className="cel-row" key={a.id}>
+                    <Avatar src={a.profile?.photo} name={a.fullName} />
+                    <div style={{ flex: 1, minWidth: 0 }}><div className="mini-name">{a.fullName}</div><div className="mini-sub">{a.course} · Batch {a.gradYear}</div></div>
+                    <button className="btn ghost" disabled={greeted.includes("w" + a.id)} onClick={() => greet(a, `Welcome to the ZDSPGC alumni community, ${a.fullName.split(" ")[0]}! \u{1F44B} Glad to have you here. \u2014 ${me.fullName}`, "w" + a.id)}>{greeted.includes("w" + a.id) ? "Sent" : "Say welcome"}</button>
+                  </div>
+                ))}
+              </div>
+            </>)}
+          </div>
+        )}
+        <div className="ig-chips">
+          <div className="search-box"><Search size={14} /><input aria-label="Search posts" placeholder="Search posts or #tags" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+          <div className="chip-row">
+            <button className={"chip" + (tagFilter === "" ? " on" : "")} onClick={() => setTagFilter("")}>All topics</button>
+            <button className={"chip" + (tagFilter === "trending" ? " on" : "")} onClick={() => setTagFilter("trending")}>{"\u{1F525}"} Trending</button>
+            {POST_TAGS.map((t) => (<button key={t.id} className={"chip" + (tagFilter === t.id ? " on" : "")} onClick={() => setTagFilter(tagFilter === t.id ? "" : t.id)}>{t.emoji} {t.label}</button>))}
+          </div>
+        </div>
+        {person && (
+          <div className="panel ig-person">
+            <Avatar src={person.profile?.photo} name={person.fullName} className="avatar lg" />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="mini-name">{person.fullName}{person.id === me.id && " (you)"}</div>
+              <div className="mini-sub">{person.course} · Batch {person.gradYear}</div>
+              <div className="mini-sub">{person.campus}{person.employment?.status && person.employment.status !== "Unemployed" && (person.employment.company || person.employment.position) ? " · " + [person.employment.position, person.employment.company].filter(Boolean).join(" at ") : ""}</div>
+              {person.profile?.directoryContact && <div className="mini-sub">{person.email}{person.phone ? " · " + person.phone : ""}</div>}
+            </div>
+            <button className="btn ghost" onClick={() => setFilter("all")}>Show all</button>
+          </div>
+        )}
+        <div className="panel ig-composer">
+          <div className="row-gap" style={{ alignItems: "flex-start", flexWrap: "nowrap" }}>
+            <Avatar src={me.profile?.photo} name={me.fullName} className="mini-avatar lg" />
+            <textarea ref={draftRef} rows={2} maxLength={POST_MAX} placeholder={curTag ? curTag.prompt : `What's on your mind, ${me.fullName.split(" ")[0]}?`} value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") addPost(); }} />
+          </div>
+          <div className="chip-row compose-tags">
+            {POST_TAGS.map((t) => (<button key={t.id} type="button" className={"chip" + (tag === t.id ? " on" : "")} style={tag === t.id ? { background: t.color, borderColor: t.color } : undefined} onClick={() => setTag(tag === t.id ? "" : t.id)}>{t.emoji} {t.label}</button>))}
+          </div>
+          {photo && (
+            <div className="ig-preview">
+              <img src={photo} alt="Photo preview" />
+              <button className="btn ghost" onClick={() => setPhoto("")}>Remove photo</button>
+            </div>
+          )}
+          <div className="ig-composer-actions">
+            <input ref={fileRef} type="file" accept="image/*" hidden onChange={pickPhoto} />
+            <div className="row-gap" style={{ gap: 4 }}>
+              <button className="btn ghost" onClick={() => fileRef.current?.click()}><ImageIcon size={16} />Photo</button>
+              {QUICK_EMOJI.map((e) => (<button key={e} type="button" className="emoji-btn" aria-label={`Add ${e}`} onClick={() => addEmoji(e)}>{e}</button>))}
+            </div>
+            <div className="row-gap">
+              <span className={"char-count" + (draft.length > POST_MAX - 40 ? " warn" : "")}>{draft.length}/{POST_MAX}</span>
+              <button className="btn primary" onClick={addPost} disabled={!draft.trim() && !photo}>Post</button>
+            </div>
+          </div>
+        </div>
+
+        {visible.map((p) => {
+          const mine = reactionOf(p, me.id);
+          const liked = mine === "like";
+          const rc = reactionCounts(p);
+          const parsed = parsePost(p.content);
+          const pinned = filter === "all" && !tagFilter && !needle && isPinned(p);
+          const saved = (p.savedBy || []).includes(me.id);
+          const canComment = p.authorId === me.id || db.alumni.find((x) => x.id === p.authorId)?.profile?.settings?.allowComments !== false;
+          const shown = expanded[p.id] ? p.comments : p.comments.slice(-2);
+          return (
+            <article className={"ig-post" + (parsed.tag ? " tagged" : "") + (pinned ? " pinned" : "")} key={p.id} style={parsed.tag ? { borderLeft: `4px solid ${parsed.tag.color}` } : undefined}>
+              <div className="ig-head">
+                <Avatar src={photoOf(db, p.authorId)} name={p.authorName} />
+                <div style={{ flex: 1 }}><div className="mini-name">{p.authorName}{isStaff(db, p.authorId) && <span className="staff-chip">Official</span>}</div><div className="mini-sub">{timeAgo(p.createdAt)}{pinned && <span className="pin-label">{" \u00b7 \u{1F4CC} Pinned"}</span>}</div></div>
+                {parsed.tag && <span className="tag-pill" style={{ background: parsed.tag.color }}>{parsed.tag.emoji} {parsed.tag.label}</span>}
+                {p.authorId === me.id && <button className="icon-btn" aria-label="Edit post" onClick={() => { setEditing(p.id); setEditText(parsed.text); }}><Edit2 size={15} /></button>}
+                {p.authorId === me.id && <button className="icon-btn danger" aria-label="Delete post" onClick={() => removePost(p)}><Trash2 size={15} /></button>}
+              </div>
+              {p.image && (
+                <div className="ig-media" onDoubleClick={() => doubleTapLike(p)}>
+                  <img src={p.image} alt={`Photo posted by ${p.authorName}`} />
+                  {burst === p.id && <Heart className="ig-burst" size={88} fill="#fff" color="#fff" />}
+                </div>
+              )}
+              <div className="ig-actions">
+                <button className={"ig-btn" + (liked ? " liked" : "")} aria-label={liked ? "Unlike" : "Like"} onClick={() => like(p)}><Heart size={22} /></button>
+                <button className="ig-btn" aria-label="Comment" onClick={() => document.getElementById("cmt-" + p.id)?.focus()}><MessageCircle size={22} />{p.comments.length > 0 && <span className="ig-count">{p.comments.length}</span>}</button>
+                <button className="ig-btn" aria-label="Share" onClick={() => share(p)}><Send size={21} /></button>
+                <button className={"ig-btn push" + (saved ? " saved" : "")} aria-label={saved ? "Unsave" : "Save"} onClick={() => toggleSave(p)}><Bookmark size={22} /></button>
+              </div>
+              <div className="ig-body">
+                {editing === p.id ? (
+                  <div className="ig-edit"><textarea rows={3} value={editText} onChange={(e) => setEditText(e.target.value)} /><div className="row-gap"><button className="btn primary" onClick={() => saveEdit(p)}>Save</button><button className="btn ghost" onClick={() => setEditing(null)}>Cancel</button></div></div>
+                ) : parsed.text && <p className="ig-text" onDoubleClick={() => doubleTapLike(p)}><strong>{p.authorName}</strong> {renderText(parsed.text)}{p.edited && <span className="mini-sub"> (edited)</span>}</p>}
+                <div className="react-row">
+                  {REACTS.map(([k, e]) => (<button key={k} type="button" className={"react-chip" + (mine === k ? " on" : "")} aria-label={`React ${k}`} onClick={() => react(p, k)}>{e}{rc[k] ? <span>{rc[k]}</span> : null}</button>))}
+                </div>
+                <div className="react-sum">{p.likes.length ? Object.entries(rc).map(([k, n]) => `${REACT_EMOJI[k] || ""} ${n}`).join("   ") : "Be the first to react"}</div>
+                {p.comments.length > 2 && !expanded[p.id] && <button className="ig-more" onClick={() => setExpanded({ ...expanded, [p.id]: true })}>View all {p.comments.length} comments</button>}
+                {shown.map((c) => <div className="ig-cmt" key={c.id}><strong>{c.authorName}</strong> {c.content}<button className={"cmt-like" + ((c.likes || []).includes(me.id) ? " on" : "")} aria-label="Like comment" onClick={() => likeComment(p, c)}>{(c.likes || []).includes(me.id) ? "\u2665" : "\u2661"}{(c.likes || []).length || ""}</button>{c.authorId === me.id && <button className="ig-del" aria-label="Delete comment" onClick={() => removeMyComment(p, c.id)}>delete</button>}</div>)}
+              </div>
+              {canComment ? (
+                <div className="ig-comment-box">
+                  <input id={"cmt-" + p.id} placeholder="Add a comment" value={commentDraft[p.id] || ""} onChange={(e) => setCommentDraft({ ...commentDraft, [p.id]: e.target.value })} onKeyDown={(e) => e.key === "Enter" && addComment(p)} />
+                  <button onClick={() => addComment(p)}>Post</button>
+                </div>
+              ) : <div className="ig-comment-box"><span className="mini-sub">Comments are turned off for this post.</span></div>}
+            </article>
+          );
+        })}
+        {!visible.length && (filter === "all" && !tagFilter && !needle && !sorted.length ? (
+          <div className="panel prompt-panel">
+            <h3>Start the conversation</h3>
+            <p className="muted">Nothing here yet. Pick a topic to begin:</p>
+            <div className="chip-row">{POST_TAGS.map((t) => (<button key={t.id} className="chip" onClick={() => { setTag(t.id); draftRef.current?.focus(); window.scrollTo?.({ top: 0, behavior: "smooth" }); }}>{t.emoji} {t.label}</button>))}</div>
+          </div>
+        ) : <EmptyState icon={filter === "saved" ? Bookmark : MessageSquare} text={needle || tagFilter ? "No posts match. Try another topic or search." : filter === "saved" ? "Nothing saved yet. Tap the bookmark on a post." : filter === "official" ? "No official posts yet." : filter !== "all" ? "No posts from this person yet." : "No posts yet. Be the first to share!"} />)}
+      </div>
+    </div>
   );
 }
 
